@@ -2,7 +2,7 @@ from InteriorHelmholtzSolver2D import *
 from ctypes import *
 import numpy as np
 
-helmholtz = CDLL("/home/fjargsto/Desktop/BEM Kirkup/Python/libhelmholtz.so.1.0.1")
+helmholtz = CDLL("/home/fjargsto/AcousticBEM/C/libhelmholtz.so")
 
 helmholtz.Hankel1.argtypes = [c_int, c_float, c_void_p]
 
