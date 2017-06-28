@@ -178,8 +178,11 @@ class InteriorHelmholtzSolverRAD(InteriorHelmholtzSolver2D):
                     return -np.dot(rr, vec_q3) / (norm(rr) * np.dot(rr, rr))
                 
                 return circle.integrate(circleFunc) * r / (2.0 * np.pi)
-            
-            return cls.ComplexQuad(generatorFunc, qa, qb)
+
+            if pOnElement:
+                return cls.ComplexQuad(generatorFunc, qa, p) + cls.ComplexQuad(generatorFunc, p, qb)
+            else:
+                return cls.ComplexQuad(generatorFunc, qa, qb)
         
         else:
             def generatorFunc(x):
@@ -197,8 +200,10 @@ class InteriorHelmholtzSolverRAD(InteriorHelmholtzSolver2D):
                 
                 return circle.integrate(circleFunc) * r / (2.0 * np.pi)
             
-            
-            return cls.ComplexQuad(generatorFunc, qa, qb)
+            if pOnElement:
+                return cls.ComplexQuad(generatorFunc, qa, p) + cls.ComplexQuad(generatorFunc, p, qb)
+            else:
+                return cls.ComplexQuad(generatorFunc, qa, qb)
         
         return 0.0
         
@@ -225,9 +230,12 @@ class InteriorHelmholtzSolverRAD(InteriorHelmholtzSolver2D):
                     return dotRnP / (norm(rr) * np.dot(rr, rr))
                 
                 return circle.integrate(circleFunc) * r / (2.0 * np.pi)
-            
-            return cls.ComplexQuad(generatorFunc, qa, qb)
-        
+
+            if pOnElement:
+                return cls.ComplexQuad(generatorFunc, qa, p) + cls.ComplexQuad(generatorFunc, p, qb)
+            else:
+                return cls.ComplexQuad(generatorFunc, qa, qb)
+
         else:
             def generatorFunc(x):
                 circle = CircularIntegratorPi(nSections)
@@ -245,7 +253,10 @@ class InteriorHelmholtzSolverRAD(InteriorHelmholtzSolver2D):
                 return circle.integrate(circleFunc) * r / (2.0 * np.pi)
             
             
-            return cls.ComplexQuad(generatorFunc, qa, qb)
+            if pOnElement:
+                return cls.ComplexQuad(generatorFunc, qa, p) + cls.ComplexQuad(generatorFunc, p, qb)
+            else:
+                return cls.ComplexQuad(generatorFunc, qa, qb)
     
     @classmethod
     def ComputeN(cls, k, p, vecp, qa, qb, pOnElement):
@@ -552,12 +563,7 @@ class InteriorHelmholtzSolverRAD(InteriorHelmholtzSolver2D):
             if (nodivu > 0 and nodivl == 0):
                 n0val = -vertu[0] * tgsumu / nodivu / np.sqrt(2.0)
             if (nodivu == 0 and nodivl == 0):
-                print "nodivu = ", nodivu
-                print "nodivl = ", nodivl
-                # As soon as possible, experiment with reenableing this assert
                 assert False, "Error in n0val assignment"
-                n0val = 0.0
-                print "n0val = ", n0val
             if lswap:
                 n0val = -n0val
             suml = l0val
@@ -743,7 +749,12 @@ class InteriorHelmholtzSolverRAD(InteriorHelmholtzSolver2D):
                 elementM  = self.ComputeM(k, center, qa, qb, i==j)
                 elementMt = self.ComputeMt(k, center, centerNormal, qa, qb, i==j)
                 elementN  = self.ComputeN(k, center, centerNormal, qa, qb, i==j)
-                    
+                '''
+                print "L[{},{}] = {}".format(i, j, elementL)
+                print "M[{},{}] = {}".format(i, j, elementM)
+                print "Mt[{},{}] = {}".format(i, j, elementMt)
+                print "N[{},{}] = {}".format(i, j, elementN)
+                '''
                 wkspc1[i, j] = elementL + mu * elementMt
                 wkspc2[i, j] = elementM + mu * elementN
 
