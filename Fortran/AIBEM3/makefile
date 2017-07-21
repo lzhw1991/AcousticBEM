@@ -1,0 +1,20 @@
+AIBEM3: AIBEM3.o AIBEM3_T.o GEOM3D.o CGLS.o H3LC.o
+	gfortran -o AIBEM3 AIBEM3.o AIBEM3_T.o GEOM3D.o H3LC.o CGLS.o
+
+AIBEM3.o: AIBEM3.FOR
+	gfortran -c AIBEM3.FOR
+
+AIBEM3_T.o: AIBEM3_T.FOR
+	gfortran -c AIBEM3_T.FOR
+
+GEOM3D.o: GEOM3D.FOR
+	gfortran -c GEOM3D.FOR
+
+H3LC.o: H3LC.FOR
+	gfortran -c H3LC.FOR
+
+CGLS.o: CGLS.FOR
+	gfortran -c CGLS.FOR
+
+clean:
+	rm AIBEM3.o AIBEM3_T.o GEOM3D.o H3LC.o CGLS.o AIBEM3 *~
