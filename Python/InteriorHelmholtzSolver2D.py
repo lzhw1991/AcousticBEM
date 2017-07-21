@@ -44,18 +44,18 @@ class BoundarySolution(object):
     
 class InteriorHelmholtzSolver2D(object):
     
-    def __init__(self, aVertex = None, aEdge = None, c = 344.0, density = 1.205):
+    def __init__(self, aVertex = None, aElement = None, c = 344.0, density = 1.205):
         assert not (aVertex is None), "Cannot construct InteriorHelmholtzProblem2D without valid vertex array."
         self.aVertex = aVertex
-        assert not (aEdge is None), "Cannot construct InteriorHelmholtzProblem2D without valid edge array."
-        self.aEdge = aEdge
+        assert not (aElement is None), "Cannot construct InteriorHelmholtzProblem2D without valid element array."
+        self.aElement = aElement
         self.c       = c
         self.density = density
         
     def __repr__(self):
         result = "InteriorHelmholtzProblem2D("
         result += "aVertex = " + repr(self.aVertex) + ", "
-        result += "aEdge = " + repr(self.aEdge) + ", "
+        result += "aElement = " + repr(self.aElement) + ", "
         result += "c = " + repr(self.c) + ", "
         result += "rho = " + repr(self.rho) + ")"
         return result
@@ -236,21 +236,19 @@ class InteriorHelmholtzSolver2D(object):
 
         return x, y
 
-    def solveBoundary(self, k, boundaryCondition, boundaryIncidence, mu = None):
-        mu = mu or (1j / (k + 1))
-        A = np.empty((boundaryCondition.f.size, boundaryCondition.f.size), dtype=complex)
+    def computeBoundaryMatrices(self, k, mu):
+        A = np.empty((self.aElement.shape[0], self.aElement.shape[0]), dtype=complex)
         B = np.empty(A.shape, dtype=complex)
-        c = np.empty(boundaryCondition.f.size, dtype=complex)
 
-        for i in range(boundaryCondition.f.size):
-            pa = self.aVertex[self.aEdge[i, 0]]
-            pb = self.aVertex[self.aEdge[i, 1]]
+        for i in range(self.aElement.shape[0]):
+            pa = self.aVertex[self.aElement[i, 0]]
+            pb = self.aVertex[self.aElement[i, 1]]
             pab = pb - pa
             center = 0.5 * (pa + pb)
             centerNormal = self.Normal2D(pa, pb)
-            for j in range(boundaryCondition.f.size):
-                qa = self.aVertex[self.aEdge[j, 0]]
-                qb = self.aVertex[self.aEdge[j, 1]]
+            for j in range(self.aElement.shape[0]):
+                qa = self.aVertex[self.aElement[j, 0]]
+                qb = self.aVertex[self.aElement[j, 1]]
 
                 elementL  = self.ComputeL(k, center, qa, qb, i==j)
                 elementM  = self.ComputeM(k, center, qa, qb, i==j)
@@ -262,6 +260,15 @@ class InteriorHelmholtzSolver2D(object):
 
             A[i,i] -= 0.5 * mu
             B[i,i] += 0.5
+
+        return A, B
+    
+    def solveBoundary(self, k, boundaryCondition, boundaryIncidence, mu = None):
+        mu = mu or (1j / (k + 1))
+        assert boundaryCondition.f.size == self.aElement.shape[0]
+        A, B = self.computeBoundaryMatrices(k, mu)
+        c = np.empty(self.aElement.shape[0], dtype=complex)
+        for i in range(self.aElement.shape[0]):
             c[i] = boundaryIncidence.phi[i] + mu * boundaryIncidence.v[i]
 
         phi, v = self.SolveLinearEquation(B, A, c,
@@ -270,6 +277,7 @@ class InteriorHelmholtzSolver2D(object):
                                           boundaryCondition.f)
         return BoundarySolution(self, k, phi, v)
 
+    
     def solveInterior(self, solution, aIncidentInteriorPhi, aInteriorPoints):
         assert aIncidentInteriorPhi.shape == aInteriorPoints.shape[:-1], \
             "Incident phi vector and interior points vector must match"
@@ -280,8 +288,8 @@ class InteriorHelmholtzSolver2D(object):
             p  = aInteriorPoints[i]
             sum = aIncidentInteriorPhi[i]
             for j in range(solution.aPhi.size):
-                qa = self.aVertex[self.aEdge[j, 0]]
-                qb = self.aVertex[self.aEdge[j, 1]]
+                qa = self.aVertex[self.aElement[j, 0]]
+                qb = self.aVertex[self.aElement[j, 1]]
 
                 elementL  = self.ComputeL(solution.k, p, qa, qb, False)
                 elementM  = self.ComputeM(solution.k, p, qa, qb, False)

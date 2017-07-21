@@ -1,17 +1,7 @@
 from InteriorHelmholtzSolver2D import *
-from ctypes import *
+from NativeInterface import *
 import numpy as np
 
-helmholtz = CDLL("/home/fjargsto/AcousticBEM/C/libhelmholtz.so")
-
-helmholtz.Hankel1.argtypes = [c_int, c_float, c_void_p]
-
-class Complex(Structure):
-    _fields_ = [('re', c_float), ('im', c_float)]
-    
-class Float2(Structure):
-    _fields_ = [('x', c_float), ('y', c_float)]
-    
 def hankel1(order, x):
     z = Complex()
     helmholtz.Hankel1(c_int(order), c_float(x), byref(z))
@@ -26,7 +16,7 @@ class InteriorHelmholtzSolver2D_C(InteriorHelmholtzSolver2D):
         qa = Float2(qa[0], qa[1])
         qb = Float2(qb[0], qb[1])
         x = c_bool(pOnElement)
-        helmholtz.ComputeL(c_float(k), p, qa, qb, x, byref(result))
+        helmholtz.ComputeL_2D(c_float(k), p, qa, qb, x, byref(result))
         return np.complex64(result.re+result.im*1j)
         
     @classmethod
@@ -36,7 +26,7 @@ class InteriorHelmholtzSolver2D_C(InteriorHelmholtzSolver2D):
         qa = Float2(qa[0], qa[1])
         qb = Float2(qb[0], qb[1])
         x = c_bool(pOnElement)
-        helmholtz.ComputeM(c_float(k), p, qa, qb, x, byref(result))
+        helmholtz.ComputeM_2D(c_float(k), p, qa, qb, x, byref(result))
         return np.complex64(result.re+result.im*1j)
         
     @classmethod
@@ -47,7 +37,7 @@ class InteriorHelmholtzSolver2D_C(InteriorHelmholtzSolver2D):
         qa = Float2(qa[0], qa[1])
         qb = Float2(qb[0], qb[1])
         x = c_bool(pOnElement)
-        helmholtz.ComputeMt(c_float(k), p, normal_p, qa, qb, x, byref(result))
+        helmholtz.ComputeMt_2D(c_float(k), p, normal_p, qa, qb, x, byref(result))
         return np.complex64(result.re+result.im*1j)
         
     @classmethod
@@ -58,6 +48,6 @@ class InteriorHelmholtzSolver2D_C(InteriorHelmholtzSolver2D):
         qa = Float2(qa[0], qa[1])
         qb = Float2(qb[0], qb[1])
         x = c_bool(pOnElement)
-        helmholtz.ComputeN(c_float(k), p, normal_p, qa, qb, x, byref(result))
+        helmholtz.ComputeN_2D(c_float(k), p, normal_p, qa, qb, x, byref(result))
         return np.complex64(result.re+result.im*1j)
         
