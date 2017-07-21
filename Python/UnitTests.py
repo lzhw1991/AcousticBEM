@@ -2,6 +2,7 @@ import unittest
 import InteriorHelmholtzSolver2D as IH
 import InteriorHelmholtzSolver2D_C as IH
 import InteriorHelmholtzSolverRAD as RAD
+import InteriorHelmholtzSolver3D as IH3
 from scipy.special import hankel1
 import numpy as np
 
@@ -32,6 +33,16 @@ class TestCircularIntegratorPI(unittest.TestCase):
         result = circle.integrate(func)
         self.assertAlmostEqual(result, np.pi, msg = "{} != {}".format(result, np.pi))
 
+class TestTriangleIntegrator(unittest.TestCase):
+    def testComplexQuad(self):
+        def func(x):
+            return 1.0
+        a = np.array([0, 0, 0], dtype=np.float32)
+        b = np.array([0, 1, 0], dtype=np.float32)
+        c = np.array([0, 0, 1], dtype=np.float32)
+        result = IH3.InteriorHelmholtzSolver3D.ComplexQuad(func, a, b, c)
+        self.assertAlmostEqual(result, 0.5, msg = "{} != {}".format(result, 0.5))
+    
 class TestHankel(unittest.TestCase):
 
     def testHankel01(self):
