@@ -1,5 +1,5 @@
 C***************************************************************
-C    Test program for subroutine AIBEM3 by Stephen Kirkup           
+C    Test program for subroutine AEBEM3 by Stephen Kirkup           
 C***************************************************************
 C 
 C  Copyright 1998- Stephen Kirkup
@@ -9,7 +9,7 @@ C  smkirkup@uclan.ac.uk
 C  http://www.researchgate.net/profile/Stephen_Kirkup
 C
 C  This open source code can be found at
-C   www.boundary-element-method.com/fortran/AIBEM3_T.FOR
+C   www.boundary-element-method.com/fortran/AEBEM3_T.FOR
 C
 C  Issued under the GNU General Public License 2007, see gpl.txt
 C
@@ -19,8 +19,8 @@ C  www.boundary-element-method.com
 C
 C***************************************************************
 C
-C This program is a test for the subroutine AIBEM3. The program computes
-C  the solution to an acoustic/Helmholtz problem interior to a sphere
+C This program is a test for the subroutine AEBEM3. The program computes
+C  the solution to an acoustic/Helmholtz problem exterior to a sphere
 C  by the boundary element method.
 C
 C Background
@@ -50,7 +50,7 @@ C
 C  where k (the wavenumber) = {\omega}/c (c=speed of sound in the 
 C  medium). {\phi} is known as the velocity potential.
 C
-C For the interior problem, the domain lies interior to a closed 
+C For the exterior problem, the domain lies exterior to a closed 
 C  boundary S. The boundary condition may be Dirichlet, Robin or 
 C  Neumann. It is assumed to have the following general form
 C
@@ -61,11 +61,11 @@ C  is the derivative of {\phi} with respect to the outward normal to S
 C  at q and {\alpha}, {\beta} and f are complex-valued functions defined
 C   on S. 
 C
-C Subroutine AIBEM3 accepts the wavenumber, a description of the 
-C  boundary of the domain and the position of the interior points
+C Subroutine AEBEM3 accepts the wavenumber, a description of the 
+C  boundary of the domain and the position of the exterior points
 C  where the solution ({\phi}) is sought, the boundary condition and
 C  returns the solution ({\phi} and v) on S and the value of {\phi}
-C  at the interior points.
+C  at the exterior points.
 C
 
 C The test problems
@@ -81,14 +81,14 @@ C  4000Hz (hence specifying k).
 C Assuming the sphere is centred at the origin the boundary conditions
 C  are specified through taking the solution to be determined by
 C
-C                      {\phi} = sin(k z),
+C                       {\phi} = exp(jkr)/r ,
 C
-C  which is clearly a solution of the Helmholtz equation.
+C  which is clearly a fundamental solution of the Helmholtz equation.
 C
 C The boundary is described by a set of NS=36 planar triangular elements
 C  of approximately equal size. The boundary solution points are the 
 C  centres of the elements. 
-C The solution is sought at the interior points (0,0), (0,0.5), 
+C The solution is sought at the exterior points (0,0), (0,0.5), 
 C  (0.25,0.25).
 
 C----------------------------------------------------------------------
@@ -98,13 +98,13 @@ C -----------------------
 C There are four components in the PARAMETER statement.
 C integer MAXNS   : The limit on the number of boundary elements.
 C integer MAXNV   : The limit on the number of vertices.
-C integer MAXNPI  : The limit on the number of interior points.
+C integer MAXNPE  : The limit on the number of exterior points.
 
 
 C External modules related to the package
 C ---------------------------------------
-C subroutine AIBEM3: Subroutine for solving the interior Helmholtz
-C  equation (file AIBEM3.FOR contains the subroutine AIBEM3)
+C subroutine AEBEM3: Subroutine for solving the exterior Helmholtz
+C  equation (file EBEM2.FOR contains EBEM2 and subordinate routines)
 C subroutine H3LC: Returns the individual discrete Helmholtz integral
 C  operators. (file H3LC.FOR contains H3LC and subordinate routines)
 C subroutine CGLS: Solves a general linear system of equations.
@@ -114,7 +114,7 @@ C file GEOM3D.FOR contains the set of relevant geometric subroutines
 
 C The program 
 
-      PROGRAM AIBEM3T
+      PROGRAM AEBEM3T
       IMPLICIT NONE
 
 C VARIABLE DECLARATION
@@ -130,10 +130,10 @@ C   Limit on the number of vertices (equal to the number of elements)
 C   Limit on the number of test problems
       INTEGER    MAXTEST
       PARAMETER (MAXTEST=5)
-C   Limit on the number of points interior to the boundary, where 
+C   Limit on the number of points exterior to the boundary, where 
 C    acoustic properties are sought
-      INTEGER    MAXNPI
-      PARAMETER (MAXNPI=6)
+      INTEGER    MAXNPE
+      PARAMETER (MAXNPE=6)
 
 C  Constants
 C   Real scalars: 0, 1, 2, pi
@@ -151,7 +151,7 @@ C   The speed of sound [standard unit: metres per second]
 C   The density [standard unit: kilograms per cubic metre]
       REAL*8     RHOVAL(MAXTEST)
 
-C   Wavenumber parameter for AIBEM3
+C   Wavenumber parameter for AEBEM3
       REAL*8     K
 C   Angular frequency 
       COMPLEX*16 OMEGA
@@ -168,13 +168,13 @@ C    metres)
       REAL*8     VERTEX(MAXNV,3)
 C   The three nodes that define each element on the boundaries
       INTEGER    SELV(MAXNS,3)
-C   The points interior to the boundary(ies) where the acoustic 
+C   The points exterior to the boundary(ies) where the acoustic 
 C    properties are sought and the directional vectors at those points.
-C    [Only necessary if an interior solution is sought.]
-C    Number of interior points and counter
-      INTEGER    NPI,IPI
-C    Coordinates of the interior points
-      REAL*8     PINT(MAXNPI,3)
+C    [Only necessary if an exterior solution is sought.]
+C    Number of exterior points and counter
+      INTEGER    NPE,IPE
+C    Coordinates of the exterior points
+      REAL*8     PEXT(MAXNPE,3)
 
 C  Number of test problems and counter
       INTEGER    NTEST,ITEST
@@ -206,11 +206,11 @@ C     case
 C    The derivative of the incident potential at the centres of the 
 C     elements in each test
       COMPLEX*16 SVELIN(MAXTEST,MAXNS)
-C    The incident potential at the interior points 
-      COMPLEX*16 PPHIIN(MAXTEST,MAXNPI)
+C    The incident potential at the exterior points 
+      COMPLEX*16 PPHIIN(MAXTEST,MAXNPE)
 
 C   Data structures that are used to define each test problem in turn
-C    and are input parameters to AIBEM3.
+C    and are input parameters to AEBEM3.
 C    SALPHA(j) is assigned the value of {\alpha} at the centre of the 
 C     j-th element.
       COMPLEX*16 SALPHA(MAXNS)
@@ -227,9 +227,9 @@ C    The derivative of the incident potential at the centres of the
 C     elements in each test
       COMPLEX*16 SFFVEL(MAXNS)
 C    The incident potential at the interior points 
-      COMPLEX*16 PFFPHI(MAXNPI)
+      COMPLEX*16 PFFPHI(MAXNPE)
 
-C  Validation and control parameters for AIBEM3
+C  Validation and control parameters for AEBEM3
 C   Switch for particular solution
       LOGICAL    LSOL
 C   Validation switch
@@ -240,28 +240,29 @@ C    geometry of the boundary.
 C   The parameter
       COMPLEX*16 MU
 
-C Output from subroutine AIBEM3
+C Output from subroutine AEBEM3
 C  The velocity potential (phi - the solution) at the centres of the 
 C   elements
       COMPLEX*16 SPHI(MAXNS)
 C  The normal derivative of the velocity potential at the centres of the
 C    elements
       COMPLEX*16 SVEL(MAXNS)
-C  The velocity potential (phi - the solution) at interior points
-      COMPLEX*16 PIPHI(MAXNPI)
+C  The velocity potential (phi - the solution) at exterior points
+      COMPLEX*16 PEPHI(MAXNPE)
 
-C Workspace for AIBEM3
+C Workspace for AEBEM3
       COMPLEX*16 WKSPC1(MAXNS,MAXNS)
       COMPLEX*16 WKSPC2(MAXNS,MAXNS)
-      COMPLEX*16 WKSPC3(MAXNPI,MAXNS)
-      COMPLEX*16 WKSPC4(MAXNPI,MAXNS)
+      COMPLEX*16 WKSPC3(MAXNPE,MAXNS)
+      COMPLEX*16 WKSPC4(MAXNPE,MAXNS)
       COMPLEX*16 WKSPC5(MAXNS)
       COMPLEX*16 WKSPC6(MAXNS)
       LOGICAL    WKSPC7(MAXNS)
 
+      REAL*8     SIZE3,DOT3
 
 C   Acoustic properties. These data structures are appended after each
-C    execution of AIBEM3 and contain the numerical solution to the test
+C    execution of AEBEM3 and contain the numerical solution to the test
 C    problems. 
 C    At the centres of the elements
 C     Sound pressure [standard unit: newtons per square metre (or
@@ -274,12 +275,12 @@ C   At the centres of the elements
       COMPLEX*16 SV(MAXTEST,MAXNS)
 C     Sound intensity [standard unit: watts per square metre]
       REAL*8     SINTY(MAXTEST,MAXNS)
-C    At the interior points
+C    At the exterior points
 C     Sound pressure [standard unit: newtons per square metre (or
 C      pascals) and phase] 
-      COMPLEX*16 IPRESS(MAXTEST,MAXNPI)
+      COMPLEX*16 IPRESS(MAXTEST,MAXNPE)
 C     Velocity potential phi
-      COMPLEX*16 IPHIVAL(MAXTEST,MAXNPI)
+      COMPLEX*16 IPHIVAL(MAXTEST,MAXNPE)
 
 C  Counter through the x,y coordinates
       INTEGER    ICOORD
@@ -291,11 +292,11 @@ C  The coordinates of the centres of the elements
       REAL*8     SELCNT(MAXNS,3)
 
 C  Other variables used in specifying the boundary condition
-      REAL*8     Z,P(3),Q(3),RR(3),R,QA(3),QB(3),QC(3),QNORM(3),DZBDN
+      REAL*8     PSOURCE(3),QA(3),QB(3),QC(3),QNORM(3),RR(3),DRBDN
+      REAL*8     R,P(3),Q(3)
 
       REAL*8     EPS
 
-      REAL*8     SIZE3,DOT3,DRBDN
 
 C INITIALISATION
 C --------------
@@ -386,13 +387,12 @@ C Set the centres of the elements, the collocation points
 C Set the points in the acoustic domain where the acoustic properties
 C  are sought, PINT. 
 C : Let them be the points (0.000,0.000), (0.000,0.500), (0.250,0.250).
-      NPI=5
-      DATA ((PINT(IPI,ICOORD),ICOORD=1,3),IPI=1,5)
-     *  /  0.500D0,     0.000D0,  0.0000D0,
-     *     0.000D0,     0.000D0,  0.010D0,
-     *     0.000D0,     0.000D0,  0.250D0,
-     *     0.000D0,     0.000D0,  0.500D0,
-     *     0.000D0,     0.000D0,  0.750D0/
+      NPE=4
+      DATA ((PEXT(IPE,ICOORD),ICOORD=1,3),IPE=1,4)
+     *   / 0.000D0,     0.000D0,  2.000D0,
+     *     0.000D0,     0.000D0,  4.000D0,
+     *     0.000D0,     0.000D0,  8.000D0,
+     *     0.000D0,     0.000D0, -2.000D0/
 
 
 C The number of points on the boundary is equal to the number of 
@@ -401,7 +401,7 @@ C  elements
         
 C Set up test problems
 C  :Set the number of test problems
-      NTEST=3
+      NTEST=4
 
 
 C  TEST PROBLEM 1
@@ -414,7 +414,7 @@ C  [C in metres per second, RHO in kilograms per cubic metre.]
       RHOVAL(1)=1.205D0
 
 C  :Set acoustic frequency value (hertz) in FRVAL
-      FRVAL(1)=20.0D0
+      FRVAL(1)=100.0D0
 
 C  : Set the wavenumber in KVAL
       KVAL(1)=TWO*PI*FRVAL(1)/CVAL(1)
@@ -428,20 +428,29 @@ C   :In this case a Dirichlet (phi-valued) boundary condition
 160   CONTINUE
 
 C  :The test problem is devised so that 
-C    {\phi}=sin((k z)
+C    {\phi}=exp(jkr)/r
+C   where r is the distance from PSOURCE the source point to the 
+C   boundary point
+C   :Set PSOURCE
+      PSOURCE(1)=0.0D0
+      PSOURCE(2)=0.0D0
+      PSOURCE(3)=0.0D0
 C   :Set K, the wavenumber
       K=KVAL(1)
       DO 170 ISP=1,NSP
-        Z=SELCNT(ISP,3)
-        SFVAL(1,ISP)=SIN(K*Z)
+        RR(1)=SELCNT(ISP,1)-PSOURCE(1)
+        RR(2)=SELCNT(ISP,2)-PSOURCE(2)
+        RR(3)=SELCNT(ISP,3)-PSOURCE(3)
+        R=SIZE3(RR)
+        SFVAL(1,ISP)=CMPLX(COS(K*R),SIN(K*R))/R
 170   CONTINUE     
 
       DO 180 ISP=1,NSP
-        SPHIIN(1,ISP)=0.0D0
-        SVELIN(1,ISP)=0.0D0
+        SPHIIN(1,ISP)=CZERO
+        SVELIN(1,ISP)=CZERO
 180   CONTINUE
-      DO 190 IPI=1,NPI
-        PPHIIN(1,IPI)=0.0D0
+      DO 190 IPE=1,NPE
+        PPHIIN(1,IPE)=CZERO
 190   CONTINUE
 
 
@@ -455,10 +464,10 @@ C  [C in metres per second, RHO in kilograms per cubic metre.]
       RHOVAL(2)=1.205D0
 
 C  :Set acoustic frequency value (hertz) in FRVAL
-      FRVAL(2)=20.0D0
+      FRVAL(2)=100.0D0
 
 C  : Set the wavenumber in KVAL
-      KVAL(2)=TWO*PI*FRVAL(1)/CVAL(1)
+      KVAL(2)=TWO*PI*FRVAL(2)/CVAL(2)
 
 C  :Set nature of the boundary condition by prescribing the values of
 C   the boundary functions SALVAL and SBEVAL at the collocation points
@@ -468,12 +477,31 @@ C   :In this case a Dirichlet (phi-valued) boundary condition
         SBEVAL(2,ISP)=CONE
 200   CONTINUE
 
+      DO 210 ISP=1,NSP
+        SPHIIN(1,ISP)=CZERO
+        SVELIN(1,ISP)=CZERO
+210   CONTINUE
+      DO 220 IPE=1,NPE
+        PPHIIN(1,IPE)=CZERO
+220   CONTINUE
+
+
+
 C  :The test problem is devised so that 
-C    {\phi}=sin((k z)
+C    d{\phi}/dn=exp(jkr)(jkr-1)/r/r
+C   where r is the distance from PSOURCE the source point to the 
+C   boundary point
+C   :Set PSOURCE
+      PSOURCE(1)=0.0D0
+      PSOURCE(2)=0.0D0
+      PSOURCE(3)=0.0D0
 C   :Set K, the wavenumber
       K=KVAL(2)
-      DO 210 ISP=1,NSP
-        Z=SELCNT(ISP,3)
+      DO 300 ISP=1,NSP
+        RR(1)=SELCNT(ISP,1)-PSOURCE(1)
+        RR(2)=SELCNT(ISP,2)-PSOURCE(2)
+        RR(3)=SELCNT(ISP,3)-PSOURCE(3)
+        R=SIZE3(RR)
         QA(1)=VERTEX(SELV(ISP,1),1)
         QA(2)=VERTEX(SELV(ISP,1),2)
         QA(3)=VERTEX(SELV(ISP,1),3)
@@ -484,17 +512,10 @@ C   :Set K, the wavenumber
         QC(2)=VERTEX(SELV(ISP,3),2)
         QC(3)=VERTEX(SELV(ISP,3),3)
         CALL NORM3(QA,QB,QC,QNORM)
-        DZBDN=QNORM(3)
-        SFVAL(2,ISP)=K*COS(K*Z)*DZBDN
-210   CONTINUE     
-
-      DO 220 ISP=1,NSP
-        SPHIIN(2,ISP)=0.0D0
-        SVELIN(2,ISP)=0.0D0
-220   CONTINUE
-      DO 230 IPI=1,NPI
-        PPHIIN(2,IPI)=0.0D0
-230   CONTINUE
+        DRBDN=DOT3(RR,QNORM)/R
+        SFVAL(2,ISP)=(CMPLX(COS(K*R),
+     *   SIN(K*R))*CMPLX(-ONE,K*R)/R/R)*DRBDN
+300   CONTINUE     
 
 
 C  TEST PROBLEM 3
@@ -507,7 +528,7 @@ C  [C in metres per second, RHO in kilograms per cubic metre.]
       RHOVAL(3)=1.205D0
 
 C  :Set acoustic frequency value (hertz) in FRVAL
-      FRVAL(3)=20.0D0
+      FRVAL(3)=100.0D0
 
 C  : Set the wavenumber in KVAL
       KVAL(3)=TWO*PI*FRVAL(3)/CVAL(3)
@@ -515,26 +536,25 @@ C  : Set the wavenumber in KVAL
 C  :Set nature of the boundary condition by prescribing the values of
 C   the boundary functions SALVAL and SBEVAL at the collocation points
 C   :In this case a Dirichlet (phi-valued) boundary condition
-      DO 240 ISP=1,NSP
-        SALVAL(3,ISP)=CZERO
-        SBEVAL(3,ISP)=CONE
-        SFVAL(3,ISP)=CZERO
-240   CONTINUE
 
 C  :The test problem is devised so that 
-C    
+C    {\phi}=exp(jkr)/4/pi/r describes the field with r being the
+C    distance from the point (0,0,3)
 C   :Set K, the wavenumber
       K=KVAL(3)
       P(1)=0.0D0
       P(2)=0.0D0
-      P(3)=0.0D0
+      P(3)=3.0D0
       DO 250 ISP=1,NSP
+        SALVAL(3,ISP)=CONE
+        SBEVAL(3,ISP)=CZERO
         Q(1)=SELCNT(ISP,1)
         Q(2)=SELCNT(ISP,2)
         Q(3)=SELCNT(ISP,3)
         CALL SUBV3(P,Q,RR)
         R=SIZE3(RR)
         SPHIIN(3,ISP)=EXP(CIMAG*K*R)/FOUR/PI/R
+        SFVAL(3,ISP)=SPHIIN(3,ISP)
         QA(1)=VERTEX(SELV(ISP,1),1)
         QA(2)=VERTEX(SELV(ISP,1),2)
         QA(3)=VERTEX(SELV(ISP,1),3)
@@ -549,18 +569,82 @@ C   :Set K, the wavenumber
         SVELIN(3,ISP)=(EXP(CIMAG*K*R)*(CIMAG*K*R-CONE)/FOUR/PI/R/R)*
      *   DRBDN
 250   CONTINUE     
-      DO 260 IPI=1,NPI
-        Q(1)=PINT(IPI,1)
-        Q(2)=PINT(IPI,2)
-        Q(3)=PINT(IPI,3)
+      DO 260 IPE=1,NPE
+        Q(1)=PEXT(IPE,1)
+        Q(2)=PEXT(IPE,2)
+        Q(3)=PEXT(IPE,3)
         CALL SUBV3(P,Q,RR)
         R=SIZE3(RR)
-        PPHIIN(3,IPI)=EXP(CIMAG*K*R)/R/FOUR/PI
+        PPHIIN(3,IPE)=EXP(CIMAG*K*R)/R/FOUR/PI
 260   CONTINUE
 
-C  :Switch for particular solution
+
+C  TEST PROBLEM 4
+C  ==============
+C  Properties of the acoustic medium. C the propagation velocity
+C  and RHO the density of the acoustic medium. C>0, RHO>0
+C  :Acoustic medium is air at 20 celcius and 1 atmosphere. 
+C  [C in metres per second, RHO in kilograms per cubic metre.]
+      CVAL(4)=344.0D0
+      RHOVAL(4)=1.205D0
+
+C  :Set acoustic frequency value (hertz) in FRVAL
+      FRVAL(4)=100.0D0
+
+C  : Set the wavenumber in KVAL
+      KVAL(4)=TWO*PI*FRVAL(4)/CVAL(4)
+
+C  :Set nature of the boundary condition by prescribing the values of
+C   the boundary functions SALVAL and SBEVAL at the collocation points
+C   :In this case a Neumann boundary condition (v=0, rigid boundary) 
+      DO 270 ISP=1,NSP
+        SALVAL(4,ISP)=CZERO
+        SBEVAL(4,ISP)=CONE
+        SFVAL(4,ISP)=0.0D0
+270   CONTINUE
+
+C  :The test problem is devised so that 
+C    {\phi}_{inc}=exp(jkr)/4/pi/r where r is the distance from (0,0,3)
+C   :Set K, the wavenumber
+      K=KVAL(4)
+      P(1)=0.0D0
+      P(2)=0.0D0
+      P(3)=3.0D0
+      DO 280 ISP=1,NSP
+        Q(1)=SELCNT(ISP,1)
+        Q(2)=SELCNT(ISP,2)
+        Q(3)=SELCNT(ISP,3)
+        CALL SUBV3(P,Q,RR)
+        R=SIZE3(RR)
+        SPHIIN(4,ISP)=EXP(CIMAG*K*R)/FOUR/PI/R
+        QA(1)=VERTEX(SELV(ISP,1),1)
+        QA(2)=VERTEX(SELV(ISP,1),2)
+        QA(3)=VERTEX(SELV(ISP,1),3)
+        QB(1)=VERTEX(SELV(ISP,2),1)
+        QB(2)=VERTEX(SELV(ISP,2),2)
+        QB(3)=VERTEX(SELV(ISP,2),3)
+        QC(1)=VERTEX(SELV(ISP,3),1)
+        QC(2)=VERTEX(SELV(ISP,3),2)
+        QC(3)=VERTEX(SELV(ISP,3),3)
+        CALL NORM3(QA,QB,QC,QNORM)
+        DRBDN=-DOT3(RR,QNORM)/R
+        SVELIN(4,ISP)=(EXP(CIMAG*K*R)*(CIMAG*K*R-CONE)/FOUR/PI/R/R)*
+     *   DRBDN
+280   CONTINUE     
+      DO 290 IPE=1,NPE
+        Q(1)=PEXT(IPE,1)
+        Q(2)=PEXT(IPE,2)
+        Q(3)=PEXT(IPE,3)
+        CALL SUBV3(P,Q,RR)
+        R=SIZE3(RR)
+        PPHIIN(4,IPE)=EXP(CIMAG*K*R)/R/FOUR/PI
+290   CONTINUE
+
+
+
+C  :Switch for the particular solution
       LSOL=.TRUE.
-C  :Switch on the validation of AIBEM3
+C  :Switch on the validation of AEBEM3
       LVALID=.TRUE.
 C  :Set EGEOM
       EGEOM=1.0D-6
@@ -580,24 +664,23 @@ C    and type of boundary condition
             SFFPHI(ISP)=SPHIIN(ITEST,ISP)
             SFFVEL(ISP)=SVELIN(ITEST,ISP)
 640       CONTINUE
-          DO 650 IPI=1,NPI
-            PFFPHI(IPI)=PPHIIN(ITEST,IPI)
+          DO 650 IPE=1,NPE
+            PFFPHI(IPE)=PPHIIN(ITEST,IPE)
 650       CONTINUE
 
-C   Set the parameter
           MU=CIMAG/(K+ONE)
 
-          CALL AIBEM3(K,
+          CALL AEBEM3(K,
      *                 MAXNV,NV,VERTEX,MAXNS,NS,SELV,
-     *                 MAXNPI,NPI,PINT,
+     *                 MAXNPE,NPE,PEXT,
      *                 SALPHA,SBETA,SF,SFFPHI,SFFVEL,PFFPHI,
      *                 LSOL,LVALID,EGEOM,MU,
-     *                 SPHI,SVEL,PIPHI,
+     *                 SPHI,SVEL,PEPHI,
      *                 WKSPC1,WKSPC2,WKSPC3,WKSPC4,
      *                 WKSPC5,WKSPC6,WKSPC7)
 
 
-C Compute the sound pressure at the interior points. Also compute
+C Compute the sound pressure at the exterior points. Also compute
 C  the velocity and intensity at the points for each type of boundary
 C  condition and each related input function f and at each point.
             DO 690 ISP=1,NSP
@@ -609,9 +692,9 @@ C  condition and each related input function f and at each point.
      *         DBLE(CONJG(PRESSURE)*SVEL(ISP))/TWO
 690         CONTINUE
 
-            DO 695 ISP=1,NPI
-              IPHIVAL(ITEST,ISP)=PIPHI(ISP)
-              IPRESS(ITEST,ISP)=CIMAG*RHOVAL(ITEST)*OMEGA*PIPHI(ISP)
+            DO 695 ISP=1,NPE
+              IPHIVAL(ITEST,ISP)=PEPHI(ISP)
+              IPRESS(ITEST,ISP)=CIMAG*RHOVAL(ITEST)*OMEGA*PEPHI(ISP)
 695         CONTINUE
 
 C  Close loop(ITEST) through the test problems
@@ -620,13 +703,13 @@ C  Close loop(ITEST) through the test problems
 
 C Output the solutions
 C  Open file for the output data
-      OPEN(UNIT=20,FILE='AIBEM3.OUT')
+      OPEN(UNIT=20,FILE='AEBEM3.OUT')
 
 C  Formats for output
 2800  FORMAT(1X,'Acoustic frequency = ',F8.2,'  Hz'/)
 2810  FORMAT(1X,'Wavenumber = ',F8.2/)
 2830  FORMAT(4X,'Acoustic properties at the boundary points'/)
-2845  FORMAT(4X,'Sound pressure at the interior points',/)
+2845  FORMAT(4X,'Sound pressure at the exterior points',/)
 2850  FORMAT(5X,'index',7X,'Potential',19X,'Pressure',24X,
      * 'Velocity',17X,'Intensity'/)
 2855  FORMAT(5X,'index',8X,'Potential',20X,'Pressure',13X,
@@ -637,7 +720,7 @@ C  Formats for output
 2910  FORMAT(4X,I4,2X,E10.4,'+ ',E10.4,' i',4X,
      * E10.4, '+ ',E10.4,' i    ',E10.4,' dB',7X,F10.4)
 
-      WRITE(20,*) 'AIBEM3: Computed solution to the acoustic properties'
+      WRITE(20,*) 'AEBEM3: Computed solution to the acoustic properties'
       WRITE(20,*)
 C  Loop(ITEST) through the test problems.
       DO 2000 ITEST=1,NTEST
@@ -664,13 +747,13 @@ C       Output the sound pressure, velocity and intensity at each point
         WRITE(20,*)
         WRITE(20,2845)
         WRITE(20,2855)
-C      Loop(IPI) through the points in the interior
-        DO 2040 IPI=1,NPI
-          PRESSURE=IPRESS(ITEST,IPI)
+C      Loop(IPE) through the points in the exterior
+        DO 2040 IPE=1,NPE
+          PRESSURE=IPRESS(ITEST,IPE)
 C       Output the sound pressure, its magnitude(dB) and phase
 
-          WRITE(20,2910) IPI,DBLE(IPHIVAL(ITEST,IPI)),
-     *     AIMAG(IPHIVAL(ITEST,IPI)),
+          WRITE(20,2910) IPE,DBLE(IPHIVAL(ITEST,IPE)),
+     *     AIMAG(IPHIVAL(ITEST,IPE)),
      *     DBLE(PRESSURE),AIMAG(PRESSURE),
      *     LOG10(ABS(PRESSURE)/PREREF)*20.0D0,
      *     ATAN2(AIMAG(PRESSURE),DBLE(PRESSURE))

@@ -178,4 +178,3 @@ C MAXNN is the size of the array, NN the size of the matrix.
 50      CONTINUE
 60    CONTINUE
       END
-

@@ -1,7 +1,7 @@
 C***************************************************************
-C           Subroutine AIBEM2 by Stephen Kirkup                     
+C           Subroutine AMBEM2 by Stephen Kirkup                     
 C***************************************************************
-C 
+C  
 C  Copyright 1998- Stephen Kirkup
 C  School of Computing Engineering and Physical Sciences
 C  University of Central Lancashire - www.uclan.ac.uk 
@@ -9,7 +9,7 @@ C  smkirkup@uclan.ac.uk
 C  http://www.researchgate.net/profile/Stephen_Kirkup
 C
 C  This open source code can be found at
-C   www.boundary-element-method.com/fortran/AIBEM2.FOR
+C   www.boundary-element-method.com/fortran/AMBEM2.FOR
 C
 C  Issued under the GNU General Public License 2007, see gpl.txt
 C
@@ -19,8 +19,8 @@ C  www.boundary-element-method.com
 C
 C***************************************************************
 C
-C This subroutine computes the solution to the two-dimensional Helmholtz
-C equation
+C This subroutine computes the modal solutions to the two-dimensional 
+C Helmholtz equation
 C                  __ 2                2
 C                  \/    {\phi}   +   k  {\phi}   =  0   
 C
@@ -29,20 +29,16 @@ C
 C The boundary (S) is defined (approximated) by a set of straight line 
 C elements. The domain of the equation is within the boundary.
 C
-C The boundary condition may be Dirichlet, Robin or Neumann. It is 
-C assumed to have the following general form
+C The nature of the boundary condition may be Dirichlet, Robin or 
+C Neumann and it is specified by the boundary functions {\alpha} and
+C {\beta}. It is assumed to have the following general form
 C
-C           {\alpha}(q) {\phi}(q) + {\beta}(q) v(q) = f(q)
+C         {\alpha}(q) {\phi}(q) + {\beta}(q) v(q) = 0
 C    
-C where {\phi}(q) is the solution at the point q on S, v(q) is the 
-C derivative of {\phi} with respect to the outward normal to S at q and
-C {\alpha}, {\beta} and f are complex-valued functions defined on S. The
-C functions {\alpha} and {\beta} must be specified to define the nature
-C of the boundary condition. Important examples are {\alpha}=1, 
-C {\beta}=0 which is equivalent to a Dirichlet boundary condition and 
-C {\alpha}=0, {\beta}=1 which is equivalent to a Neumann boundary 
-C condition. The specification of f completes the definition of the 
-C boundary condition.
+C where {\alpha} and {\beta} are complex-valued functions defined on S.
+C Important examples are {\alpha}=1, {\beta}=0 which is equivalent to a
+C Dirichlet  boundary condition and {\alpha}=0, {\beta}=1 which is 
+C equivalent to a Neumann boundary condition. 
 C
 C
 C How to use the subroutine
@@ -64,8 +60,8 @@ C                                   :        |                         :
 C                                   :        |                         :
 C      ----------------------       :     --------------------------   :
 C      |                    |       :     |                        |   :
-C      |   MAIN PROGRAM     |------->-----|      AIBEM2             |   :
-C      |(e.g. aibem2_t.for) |       :     |                        |   :
+C      |   MAIN PROGRAM     |------->-----|      AMBEM2             |   :
+C      |(e.g. ambem2_t.for) |       :     |                        |   :
 C      |                    |       :     --------------------------   :
 C      ----------------------       :                 |                :
 C                                   :                 >                :
@@ -80,20 +76,20 @@ C                                  /         |                 |
 C                               |_           >                 >
 C                              /             |                 |
 C             ................       ................   ................  
-C             :              :       :   --------   :   :  --------    : 
-C             : (geom2d.for) :---<---:   | H2LC |   :   :  | CGLS |    : 
-C             :              :       :   --------   :   :  --------    :  
+C             :              :       :   --------   :   :  ---------   : 
+C             : (geom2d.for) :---<---:   | H2LC |   :   :  | INTEIG |  : 
+C             :              :       :   --------   :   :  ---------   :  
 C             :..............:       : -------------:   : -------------:  
 C                                    : |subordinate|:   : |subordinate|: 
 C                                    : | routines  |:   : | routines  |:  
 C                                    : -------------:   : -------------: 
 C                                    :              :   :              : 
-C                                    : (h2lc.for)   :   : (cgls.for)   :
+C                                    : (h2lc.for)   :   : (inteig.for) :
 C                                    :..............:   :..............:
 C                                    
 C
 C The contents of the main program, the file containing FNHANK must be
-C  linked to AIBEM2.FOR, H2LC.FOR and CGLS.FOR.
+C  linked to LBEM2.FOR, H2LC.FOR and INTEIG.FOR.
 C
 C Method of solution
 C ------------------
@@ -106,11 +102,11 @@ C  data structure SELV defines each element by indicating the labels
 C  for the two nodes it lies between and hence enumerates the elements.
 C The boundary solution points (the points on the boundary at which 
 C  {\phi} (SPHI) and d {\phi}/dn (SVEL) are returned) are at the centres
-C  of the elements. The boundary functions {\alpha} (SALPHA), {\beta} 
-C  (SBETA) and f (SF) are also defined by their values at the centres
+C  of the elements. The boundary functions {\alpha} (SALPHA), and 
+C  {\beta} (SBETA) are also defined by their values at the centres
 C  of the elements.
-C Normally a solution in the domain is required. By listing the 
-C  coordinates of all the interior points in PINT, the subroutine
+C Normally, the modal solution in the domain is required. By listing
+C  the coordinates of a set of interior points in PINT, the subroutine
 C  returns the value of {\phi} at these points in PIPHI.
 C
 C
@@ -119,20 +115,32 @@ C ---------------------------------------
 C
 C The subroutine has the form
 C
-C      SUBROUTINE AIBEM2(K,
+
+C      SUBROUTINE AMBEM2(KA,KB,MAXNK,NK,
+C     *                 MAXNEIG,
 C     *                 MAXNV,NV,VERTEX,MAXNSE,NSE,SELV,
 C     *                 MAXNPI,NPI,PINT,
-C     *                 SALPHA,SBETA,SF,SFFPHI,SFFVEL,PFFPHI,
-C     *                 LSOL,LVALID,EGEOM,MU,
-C     *                 SPHI,SVEL,PIPHI,
-C     *                 WKSPC1,WKSPC2,WKSPC3,WKSPC4,
-c     *                 WKSPC5,WKSPC6,WKSPC7)
+C     *                 SALPHA,SBETA,
+C     *                 LVALID,EGEOM,
+C     *                 NEIG,EIGVAL,SPHI,SVEL,PIPHI,
+C     *                 WKSPC1,WKSPC2,WKSPC3,WKSPC4,WKSPC5,WKSPC6,WKSPC7,
+C     *                 WKSP00,WKSP01,WKSP02,WKSP03,WKSP04,WKSP05,
+C     *                 WKSP06,WKSP07,WKSP08,WKSP09,WKSP10,WKSP11,
+C     *                 WKSP12)
+
 
 C The parameters to the subroutine
 C ================================
 
-C Wavenumber (input)
-C real K: Must be positive.
+C  Wavenumber interpolation information (input)
+C   Lower limit of k-range
+C      REAL*8     KA
+C   Upper limit of k-range
+C      REAL*8     KB
+C   Limit on the number of interpolation points in the k-range
+C      INTEGER    MAXNK
+C   Number of interpolation points in the k-range
+C      INTEGER    NK
 
 C Geometry of the boundary S (input)
 C integer MAXNV: The limit on the number of vertices of the polygon
@@ -155,48 +163,47 @@ C integer NPI: The number of interior points. 0<=NPI<=MAXNPI.
 C real PINT(MAXNPI,2). The coordinates of the interior point.
 C  PINT(i,1),PINT(i,2) are the x,y coordinates of the i-th point.
 
-C The boundary condition ({\alpha} {\phi} + {\beta} v = f) (input)
+C The boundary condition ({\alpha} {\phi} + {\beta} v = 0) (input)
 C complex SALPHA(MAXNSE): The values of {\alpha} at the centres
 C  of the elements.
 C complex SBETA(MAXNSE): The values of {\beta} at the centres
 C  of the elements.
-C complex SF(MAXNSE): The values of f at the centres of the 
-C  elements.
-
-C complex SFFPHI(MAXNSE): The incident velocity potential at the
-C  centres of the elements
-C complex SFFVEL(MAXNSE): The derivative of the incident velocity 
-C  centres of the elements
-C complex PFFPHI(MAXNPI): The incident velocity potential at the chosen
-C  interior points
 
 C Validation and control parameters (input) 
-C logical LSOL: A switch to control whether the particular
-C  solution is required.
 C logical LVALID: A switch to enable the choice of checking of 
 C  subroutine parameters.
 C real EGEOM: The maximum absolute error in the parameters that
 C  describe the geometry.
-C complex MU: The weighting parameter in the direct formulations.
-C  As a default, set MU=I/(K+1).
 
 C  Solution (output)
-C  complex SPHI(MAXNSE): The velocity potential ({\phi}) at the
-C   centres of the boundary elements.
-C  complex SVEL(MAXNSE): The velocity (v or d{\phi}/dn where n is
-C   the outward normal to the boundary) at the centres of the boundary 
-C   elements.
-C  complex PIPHI(MAXNPI): The velocity potential ({\phi}) at the 
-C   interior points.
+C  integer NEIG: The number of eigenvalues.
+C  complex EIGVAL(MAXNEIG): The eigenvalues.
+C  complex SPHI(MAXNEIG,MAXNSE): The velocity potential ({\phi}) at
+C  the centres of the boundary elements.
+C  complex SVEL(MAXNEIG,MAXNSE): The velocity (v or d{\phi}/dn
+C  where n is the outward normal to the boundary) at the centres of the
+C   boundary elements.
+C  complex PIPHI(MAXNEIG,MAXNPI): The velocity potential ({\phi}) at
+C  the interior points.
 
 C  Working space
-C  complex WKSPC1(MAXNSE,MAXNSE)
-C  complex WKSPC2(MAXNSE,MAXNSE)
-C  complex WKSPC3(MAXNPI,MAXNSE)
-C  complex WKSPC4(MAXNPI,MAXNSE)
-C  complex WKSPC5(MAXNSE)
-C  complex WKSPC6(MAXNSE)
-C  logical WKSPC7(MAXNSE)
+C  complex WKSPC1(MAXNK,MAXNSE,MAXNSE)
+C  complex WKSPC2(MAXNK,MAXNSE,MAXNSE)
+C  complex WKSPC3(MAXNK,MAXNSE,MAXNSE)
+C  logical WKSPC4(MAXNSE)
+C  complex WKSP00((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  complex WKSP01((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  complex WKSP02((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  real    WKSP03((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  real    WKSP04((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  real    WKSP05((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  real    WKSP06((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  real    WKSP07((MAXNK-1)*MAXNSE)
+C  real    WKSP08((MAXNK-1)*MAXNSE)
+C  real    WKSP09(MAXNK)
+C  integer WKSP10((MAXNK-1)*MAXNSE)
+C  complex WKSP11((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+C  complex WKSP12((MAXNK-1)*MAXNSE)
 
 C External modules to be supplied with the main program
 C =====================================================
@@ -227,14 +234,19 @@ C  zero.
 C Notes on the boundary condition
 C -------------------------------
 C (1) For each i=1..NSE, it must not be the case that both of SALPHA(i)
-C  and SBETA(i) are zero.
+C  and SBETA(i) are zero
+
+C Notes on the solution
+C ---------------------
+C (1) The results {\phi} on SUD and its derivative on S is a mode shape.
+C Hence the results can all be multiplied by an arbitrary constant.
 
 C External modules in external files
 C ==================================
 C subroutine H2LC: Returns the individual discrete Helmholtz integral
-C  operators (in file H2LC.FOR).
-C subroutine CGLS: Solves a general linear system of equations. 
-C  (in file CGLS.FOR)
+C  operators. (in file H2LC.FOR)
+C subroutine INTEIG: Solves a general linear system of equations. 
+C  (in file INTEIG.FOR)
 C real function DIST2: Returns the distance between two 2-vectors. (in
 C  file GEOM2D.FOR)
 
@@ -248,18 +260,34 @@ C real function FNLOG(X): real X : Returns the natural logarithm of X.
 
 C The subroutine
 
-      SUBROUTINE AIBEM2(K,
+
+      SUBROUTINE AMBEM2(KA,KB,MAXNK,NK,
+     *                 MAXNEIG,
      *                 MAXNV,NV,VERTEX,MAXNSE,NSE,SELV,
      *                 MAXNPI,NPI,PINT,
-     *                 SALPHA,SBETA,SF,SFFPHI,SFFVEL,PFFPHI,
-     *                 LSOL,LVALID,EGEOM,MU,
-     *                 SPHI,SVEL,PIPHI,
-     *                 WKSPC1,WKSPC2,WKSPC3,WKSPC4,
-     *                 WKSPC5,WKSPC6,WKSPC7)
+     *                 SALPHA,SBETA,
+     *                 LVALID,EGEOM,
+     *                 NEIG,EIGVAL,SPHI,SVEL,PIPHI,
+     *                 WKSPC1,WKSPC2,WKSPC3,WKSPC4,WKSPC5,WKSPC6,WKSPC7,
+     *                 WKSP00,WKSP01,WKSP02,WKSP03,WKSP04,WKSP05,
+     *                 WKSP06,WKSP07,WKSP08,WKSP09,WKSP10,WKSP11,
+     *                 WKSP12)
+
       PARAMETER (MAXNQ=32)
 
-C  Wavenumber
-      REAL*8     K
+C  Wavenumber interpolation information
+C   Lower limit of k-range
+      REAL*8     KA
+C   Upper limit of k-range
+      REAL*8     KB
+C   Limit on the number of interpolation points in the k-range
+      INTEGER    MAXNK
+C   Number of interpolation points in the k-range
+      INTEGER    NK
+
+C  Eigenvalue information
+C   Limit on the number of eigenvalues determined in the k-range
+      INTEGER    MAXNEIG
 
 C  Boundary geometry
 C   Limit on the number of vertices on S
@@ -273,7 +301,6 @@ C   Limit on the number of elements describing S
 C   The number of elements describing S
       INTEGER    NSE
 C   The indices of the vertices describing each element
-
       INTEGER    SELV(MAXNSE,2)
       
 C  Interior points at which the solution is to be observed
@@ -285,47 +312,37 @@ C   The number of interior points
 C   Coordinates of the interior points
       REAL*8     PINT(MAXNPI,2)
 
-C  The boundary condition is such that {\alpha} {\phi} + {\beta} v = f
-C  where alpha, beta and f are complex valued functions over S.
+C  The boundary condition is such that {\alpha} {\phi} + {\beta} v = 0
+C  where alpha, beta are complex valued functions over S.
 C  The functions are set values at the collocation points.
 C   function alpha
       COMPLEX*16 SALPHA(MAXNSE)
 C   function beta
       COMPLEX*16 SBETA(MAXNSE)
-C   function f
-      COMPLEX*16 SF(MAXNSE)
-
-C  The incident velocity potential on S
-      COMPLEX*16 SFFPHI(MAXNSE)
-C  The derivative of the incident velocity potential on S
-      COMPLEX*16 SFFVEL(MAXNSE)
-C  The incident velocity potential at the chosen interior points
-      COMPLEX*16 PFFPHI(MAXNPI)
 
 C  Validation and control parameters
-      LOGICAL    LSOL
       LOGICAL    LVALID
       REAL*8     EGEOM
-      COMPLEX*16 MU
 
 C  Solution 
+C   Number of eigenvalues determined in the k-range
+      INTEGER    NEIG
+C   eigenvalues
+      COMPLEX*16     EIGVAL(MAXNEIG)
 C   function phi
-      COMPLEX*16 SPHI(MAXNSE)
+      COMPLEX*16 SPHI(MAXNEIG,MAXNSE)
 C   function vel
-      COMPLEX*16 SVEL(MAXNSE)
+      COMPLEX*16 SVEL(MAXNEIG,MAXNSE)
 C   domain solution
-      COMPLEX*16 PIPHI(MAXNPI)
+      COMPLEX*16 PIPHI(MAXNEIG,MAXNPI)
 
 C  Working space 
-      COMPLEX*16 WKSPC1(MAXNSE,MAXNSE)
-      COMPLEX*16 WKSPC2(MAXNSE,MAXNSE)
-      COMPLEX*16 WKSPC3(MAXNPI,MAXNSE)
-      COMPLEX*16 WKSPC4(MAXNPI,MAXNSE)
-      COMPLEX*16 WKSPC5(MAXNSE)
-      COMPLEX*16 WKSPC6(MAXNSE)
-      LOGICAL    WKSPC7(MAXNSE)
+      COMPLEX*16 WKSPC1(MAXNK,MAXNSE,MAXNSE)
+      COMPLEX*16 WKSPC2(MAXNK,MAXNSE,MAXNSE)
+      COMPLEX*16 WKSPC3(MAXNK,MAXNSE,MAXNSE)
+      LOGICAL    WKSPC4(MAXNSE)
 
-c  External function
+C  External function
       REAL*8     DIST2
 
 C  Constants
@@ -334,6 +351,8 @@ C   Real scalars: 0, 1, 2, half, pi
 C   Complex scalars: (0,0), (1,0), (0,1)
       COMPLEX*16 CZERO,CONE,CIMAG
 
+C  Wavenumber
+      REAL*8     K
 C  Wavenumber in complex form
       COMPLEX*16 CK
 
@@ -341,7 +360,7 @@ C  Geometrical description of the boundary
 C   Elements counter
       INTEGER    ISE,JSE
 C   The points interior to the boundary where the solution is sought 
-      INTEGER    IPI
+      INTEGER    IIP
 C   Parameters for H2LC
       REAL*8     P(2),PA(2),PB(2),QA(2),QB(2),VECP(2)
       LOGICAL    LPONEL
@@ -391,6 +410,33 @@ C  Parameters for subroutine H2LC.
       COMPLEX*16 DISMKT
       COMPLEX*16 DISNK
 
+C  Parameters for subroutine INTEIG
+C   The k-coordiate of the interpolation matrices
+      REAL*8 WKSPC5(MAXNK)
+
+C The list of eigenvectors. EIGVCT(i,j) gives the value of the 
+C  j-th component of the i-th eigenvector. The eigenvectors are
+C  normalised
+      COMPLEX*16 WKSPC6((MAXNK-1)*MAXNSE,MAXNSE)
+      LOGICAL    WKSPC7(MAXNSE)
+
+C Work space
+C ----------
+      COMPLEX*16 WKSP00((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      COMPLEX*16 WKSP01((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      COMPLEX*16 WKSP02((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      REAL*8     WKSP03((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      REAL*8     WKSP04((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      REAL*8     WKSP05((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      REAL*8     WKSP06((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      REAL*8     WKSP07((MAXNK-1)*MAXNSE)
+      REAL*8     WKSP08((MAXNK-1)*MAXNSE)
+      REAL*8     WKSP09(MAXNK)
+      INTEGER    WKSP10((MAXNK-1)*MAXNSE)
+      COMPLEX*16 WKSP11((MAXNK-1)*MAXNSE,(MAXNK-1)*MAXNSE)
+      COMPLEX*16 WKSP12((MAXNK-1)*MAXNSE)
+
+
 C  Other variables
 C   Error flag
       LOGICAL    LERROR
@@ -407,7 +453,9 @@ C   Maximum,minimum sizes of elements
 C   The `diameter' of the boundary or the maximum distance between any
 C    two vertices
       REAL*8     DIAM
-      REAL*8     SUMMK     
+      REAL*8     SUMMK
+     
+      COMPLEX*16 CONST
 
 C INITIALISATION
 C --------------
@@ -422,9 +470,6 @@ C Set constants
       CONE=CMPLX(ONE,ZERO)
       CIMAG=CMPLX(ZERO,ONE)
 
-      EQRULE=1.0D-6
-      EK=1.0D-6
-
 C Validation
 C ==========
 
@@ -437,63 +482,88 @@ C Check that the subroutine FNHANK is satisfactory
         IF (ABS(DBLE(THANK(1))-0.4401).GT.1.0D-3) LERROR=.TRUE.
         IF (ABS(AIMAG(THANK(1))+0.7812).GT.1.0D-3) LERROR=.TRUE.
         IF (LERROR) THEN
-          WRITE(*,*) 'ERROR(AIBEM2) - in Hankel function routine FNHANK'
+          WRITE(*,*) 'ERROR(AMBEM2) - in Hankel function routine FNHANK'
           STOP
         END IF
       END IF
 
 
-C Validation of parameters of AIBEM2
+C Validation of parameters of AMBEM2
 C ---------------------------------
 
       IF (LVALID) THEN
 
 C Validation of main paramters
         LERROR=.FALSE.
-        IF (K.LT.ZERO) THEN
-          WRITE(*,*) 'K = ',K
-          WRITE(*,*) 'ERROR(AIBEM2) - K must be positive'
+        IF (MAXNK.LT.2) THEN 
+          WRITE(*,*) 'MAXNK = ',MAXNK
+          WRITE(*,*) 'ERROR(AMBEM2) - MAXNK must be at least two'
+          LERROR=.TRUE.
+        END IF
+        IF (NK.GT.MAXNK.OR.NK.LT.2) THEN 
+          WRITE(*,*) 'NK = ',NK
+          WRITE(*,*) 'ERROR(AMBEM2) - must have 2<=NK<=MAXNK'
+          LERROR=.TRUE.
+        END IF
+        IF (MAXNEIG.LT.1) THEN 
+          WRITE(*,*) 'MAXNEIG = ',MAXNEIG
+          WRITE(*,*) 'ERROR(AMBEM2) - MAXNEIG must be at least one'
+          LERROR=.TRUE.
+        END IF
+        IF (KA.LT.ZERO) THEN
+          WRITE(*,*) 'KA = ',KA
+          WRITE(*,*) 'ERROR(AMBEM2) - KA must be positive'
+          LERROR=.TRUE.
+        END IF
+        IF (KB.LE.KA) THEN
+          WRITE(*,*) 'KA,KB = ',KA,KB
+          WRITE(*,*) 'ERROR(AMBEM2) - KB must be greater than KA'
+          LERROR=.TRUE.
+        END IF
+        IF (MAXNEIG.LT.1) THEN
+          WRITE(*,*) 'MAXNEIG = ',MAXNEIG
+          WRITE(*,*) 'ERROR(AMBEM2) - must have MAXNEIG>=1'
           LERROR=.TRUE.
         END IF
         IF (MAXNV.LT.3) THEN
           WRITE(*,*) 'MAXNV = ',MAXNV
-          WRITE(*,*) 'ERROR(AIBEM2) - must have MAXNV>=3'
+          WRITE(*,*) 'ERROR(AMBEM2) - must have MAXNV>=3'
           LERROR=.TRUE.
         END IF
         IF (NV.LT.3.OR.NV.GT.MAXNV) THEN
           WRITE(*,*) 'NV = ',NV
-          WRITE(*,*) 'ERROR(AIBEM2) - must have 3<=NV<=MAXNV'
+          WRITE(*,*) 'ERROR(AMBEM2) - must have 3<=NV<=MAXNV'
           LERROR=.TRUE.
         END IF
         IF (MAXNSE.LT.3) THEN
           WRITE(*,*) 'MAXNSE = ',MAXNSE
-          WRITE(*,*) 'ERROR(AIBEM2) - must have MAXNSE>=3'
+          WRITE(*,*) 'ERROR(AMBEM2) - must have MAXNSE>=3'
           LERROR=.TRUE.
         END IF
         IF (NSE.LT.3.OR.NSE.GT.MAXNSE) THEN
           WRITE(*,*) 'NSE = ',NSE
-          WRITE(*,*) 'ERROR(AIBEM2) - must have 3<=NSE<=MAXNSE'
+          WRITE(*,*) 'ERROR(AMBEM2) - must have 3<=NSE<=MAXNSE'
           LERROR=.TRUE.
         END IF
         IF (MAXNPI.LT.1) THEN
           WRITE(*,*) 'MAXNPI = ',MAXNPI
-          WRITE(*,*) 'ERROR(AIBEM2) - must have MAXNPI>=1'
+          WRITE(*,*) 'ERROR(AMBEM2) - must have MAXNPI>=1'
           LERROR=.TRUE.
         END IF
         IF (NPI.LT.0.OR.NPI.GT.MAXNPI) THEN
           WRITE(*,*) 'NPI = ',NPI
-          WRITE(*,*) 'ERROR(AIBEM2) - must have 3<=NPI<=MAXNPI'
+          WRITE(*,*) 'ERROR(AMBEM2) - must have 3<=NPI<=MAXNPI'
           LERROR=.TRUE.
         END IF
         IF (EGEOM.LE.ZERO) THEN
           WRITE(*,*) 'NPI = ',NPI
-          WRITE(*,*) 'ERROR(AIBEM2) - EGEOM must be positive'
+          WRITE(*,*) 'ERROR(AMBEM2) - EGEOM must be positive'
           LERROR=.TRUE.
         END IF
         IF (LERROR) THEN
           LFAIL=.TRUE.
           WRITE(*,*)
-          WRITE(*,*) 'Error(s) found in the main parameters of AIBEM2'
+          WRITE(*,*) 'Error(s) found in the main parameters of AMBEM2'
           WRITE(*,*) 'Execution terminated'
           STOP
         END IF
@@ -517,14 +587,15 @@ C Check that the boundary defined by SELV is complete and closed
         DO 120 ISE=1,NSE-1
           IF (SELV(ISE,2).NE.SELV(ISE+1,1)) LERROR=.TRUE.
 120     CONTINUE
+        IF (SELV(1,1).NE.SELV(NSE,2)) LERROR=.TRUE.
         IF (LERROR) THEN
-          WRITE(*,*) 'ERROR(AIBEM2) - boundary defined by SELVis not'
+          WRITE(*,*) 'ERROR(AMBEM2) - boundary defined by SELVis not'
           WRITE(*,*) ' complete and closed'
         END IF
 C Check that EGEOM is not too large
         IF (EGEOM.GT.DIAM/100.0D0) THEN
           WRITE(*,*) 'EGEOM = ',EGEOM
-          WRITE(*,*) 'ERROR(AIBEM2) - EGEOM is set too large'
+          WRITE(*,*) 'ERROR(AMBEM2) - EGEOM is set too large'
           LERROR=.TRUE.
         END IF
         IF (LERROR) THEN
@@ -554,7 +625,7 @@ C Check that the vertices are distinct with respect to EGEOM
 130     CONTINUE
         IF (LERROR) THEN
           WRITE(*,*) 
-          WRITE(*,*) 'ERROR(AIBEM2) - Vertices (see above) coincide'
+          WRITE(*,*) 'ERROR(AMBEM2) - Vertices (see above) coincide'
           WRITE(*,*) 'Execution terminated'
           STOP
         END IF
@@ -574,7 +645,7 @@ C Check that the elements are not of disproportionate sizes
           SIZMIN=MIN(SIZMIN,DIST2(QA,QB))
 150     CONTINUE
         IF (SIZMAX.GT.10.0D0*SIZMIN) THEN
-          WRITE(*,*) 'WARNING(AIBEM2) - Elements of disproportionate'
+          WRITE(*,*) 'WARNING(AMBEM2) - Elements of disproportionate'
           WRITE(*,*) ' sizes'
         END IF
       END IF          
@@ -594,20 +665,20 @@ C Check that the boundary does not contain sharp angles
             QC(1)=VERTEX(SELV(NSE,1),1)
             QC(2)=VERTEX(SELV(NSE,1),2)
           END IF
-          IF (DIST2(QC,QB).LT.MAX(DIST2(QA,QB),DIST2(QA,QC))/5) THEN
+          IF (DIST2(QC,QB).LT.MAX(DIST2(QA,QB),DIST2(QA,QC))) THEN
             WRITE(*,*) 'Sharp angle at node ',SELV(ISE,1)
             LERROR=.TRUE.
           END IF
 160     CONTINUE
         IF (LERROR) THEN
           WRITE(*,*)
-          WRITE(*,*) 'WARNING(AIBEM2) - Boundary has sharp angles'
+          WRITE(*,*) 'WARNING(AMBEM2) - Boundary has sharp angles'
         END IF
       END IF          
      
 
 C Validation of the surface functions
-      IF (LVALID.AND.LSOL) THEN
+      IF (LVALID) THEN
         LERROR=.FALSE.
         DO 170 ISE=1,NSE
           IF (MAX(ABS(SALPHA(ISE)),ABS(SBETA(ISE))).LT.1.0D-6) 
@@ -615,12 +686,28 @@ C Validation of the surface functions
 170     CONTINUE
         IF (LERROR) THEN
           WRITE(*,*) 
-          WRITE(*,*) 'ERROR(AIBEM2) - at most one of SALPHA(i),SBETA(i)'
+          WRITE(*,*) 'ERROR(AMBEM2) - at most one of SALPHA(i),SBETA(i)'
           WRITE(*,*) ' may be zero for all i'
           WRITE(*,*) 'Execution terminated'
           STOP
         END IF
       END IF
+   
+     
+C Set the k-values of the interpolation points
+      DO 205 IKPT=1,NK
+        WKSPC5(IKPT)=(KA+KB)/2.0D0-
+     *   COS((2*IKPT-1)*PI/DFLOAT(2*NK))*(KB-KA)/2.0D0
+205   CONTINUE
+
+
+C Set up validation and control parameters
+C  Switch off the validation of H2LC
+      LVAL=.FALSE.
+C  Set EK
+      EK=1.0D-6
+C  Set EQRULE
+      EQRULE=1.0D-6
 
 C Set up the quadrature rule(s).
 C  Set up quadrature rule for the case when P is not on the element.
@@ -635,7 +722,6 @@ C   This is done by splitting the quadrature rule at the centre.
         WQON(IQ)=WQOFF(IQ)/TWO
         WQON(NQOFF+IQ)=WQOFF(IQ)/TWO
 330   CONTINUE
-
 
 C Validation that the surface is closed
       IF (LVALID) THEN
@@ -657,12 +743,8 @@ C  Set QA and QB, the coordinates of the edges of the JSEth element
 C     Set LPONEL
           LPONEL=(JSE.EQ.1)
 
-C     Switch off the validation parameter for H2LC
-          LVAL=.FALSE.
-
-
-C     Only Mk operators is required. Set LMK true, 
-C      LLK, LMKT,LNK false. 
+C     Only the Mk operator is required. Set LMK true, 
+C      LLK,LMKT,LNK false. 
           LLK=.FALSE.
           LMK=.TRUE.
           LMKT=.FALSE.
@@ -676,21 +758,20 @@ C     Call H2LC.
           
           SUMMK=SUMMK+DISMK
 180     CONTINUE
-        IF (ABS(SUMMK+0.5D0).GT.0.01) THEN
+        IF (ABS(SUMMK-0.5D0).LT.0.01) THEN
           WRITE(*,*) 
-          WRITE(*,*) 'ERROR(AIBEM2) - in geometry'
+          WRITE(*,*) 'ERROR(AMBEM2) - in geometry'
           WRITE(*,*) ' The boundary could be oriented wrongly'
           WRITE(*,*) '  On the outer boundary arrange panels'
-     *     // ' in clockwise order'
+     *     // 'in clockwise order'
           WRITE(*,*) '  If there are inner boundaries arrange the'
-     *     // ' panels in anticlockwise order'
+     *     // 'panels in anticlockwise order'
           STOP
         END IF
         IF (ABS(SUMMK+0.5D0).GT.0.01) THEN
           WRITE(*,*) 
-          WRITE(*,*) 'WARNING(AIBEM2) - in geometry'
+          WRITE(*,*) 'WARNING(AMBEM2) - in geometry'
           WRITE(*,*) ' The boundary panels may be arranged incorrectly'
-          STOP
         END IF
       END IF  
 
@@ -730,7 +811,7 @@ C     Call H2LC.
 
         IF (ABS(SUMMK+1.0D0).GT.0.01) THEN
           WRITE(*,*) 
-          WRITE(*,*) 'WARNING(AIBEM2) - The observation point'
+          WRITE(*,*) 'WARNING(AMBEM2) - The observation point'
           WRITE(*,*) ' (',P(1),',',P(2),')'
           WRITE(*,*) ' is may not be interior to the boundary'
         END IF
@@ -738,42 +819,39 @@ C     Call H2LC.
       END IF
 
 
-
-C Set the wavenumber in complex form
-      CK=CMPLX(K,ZERO)
-
-
-C Set up validation and control parameters
-C  Switch on the validation of H2LC
-      LVAL=.FALSE.
-C  Set EK
-      EK=1.0D-6
-C  Set EQRULE
-      EQRULE=1.0D-6
-
+C Loop(IKPT) through the points on the wavenumbers
+      DO 500 IKPT=1,NK
+C  Set the wavenumber
+        K=WKSPC5(IKPT)
+C  Set the wavenumber in complex form
+        CK=CMPLX(K,ZERO)
 
 C  Compute the discrete Lk, Mk, Mkt and Nk matrices
 C   Loop(ISE) through the points on the boundary
-      DO 510 ISE=1,NSE
+        DO 510 ISE=1,NSE
 C    Set P
-        PA(1)=VERTEX(SELV(ISE,1),1)
-        PA(2)=VERTEX(SELV(ISE,1),2)
-        PB(1)=VERTEX(SELV(ISE,2),1)
-        PB(2)=VERTEX(SELV(ISE,2),2)
-        P(1)=(PA(1)+PB(1))/TWO
-        P(2)=(PA(2)+PB(2))/TWO
+          PA(1)=VERTEX(SELV(ISE,1),1)
+          PA(2)=VERTEX(SELV(ISE,1),2)
+          PB(1)=VERTEX(SELV(ISE,2),1)
+          PB(2)=VERTEX(SELV(ISE,2),2)
+          P(1)=(PA(1)+PB(1))/TWO
+          P(2)=(PA(2)+PB(2))/TWO
 C    Set VECP to the normal on the boundary of the element at P
-        CALL NORM2(PA,PB,VECP)
+          CALL NORM2(PA,PB,VECP)
 C    Loop(ISE) through the elements
-        DO 520 JSE=1,NSE
+          DO 520 JSE=1,NSE
 C     Set QA and QB, the coordinates of the edges of the JSEth element
-          QA(1)=VERTEX(SELV(JSE,1),1)
-          QA(2)=VERTEX(SELV(JSE,1),2)
-          QB(1)=VERTEX(SELV(JSE,2),1)
-          QB(2)=VERTEX(SELV(JSE,2),2)
+            QA(1)=VERTEX(SELV(JSE,1),1)
+            QA(2)=VERTEX(SELV(JSE,1),2)
+            QB(1)=VERTEX(SELV(JSE,2),1)
+            QB(2)=VERTEX(SELV(JSE,2),2)
 
 C     Set LPONEL
-          LPONEL=(ISE.EQ.JSE)
+            IF (ISE.EQ.JSE) THEN
+              LPONEL=.TRUE.
+            ELSE
+              LPONEL=.FALSE.
+            END IF
 
 C     Select quadrature rule for H2LC
 C   :  Select the quadrature rule AQON-WQON in the case when the
@@ -781,114 +859,163 @@ C   :   point p lies on the element, otherwise select AQOFF-WQOFF
 C      [Note that the overall method would benefit from selecting from
 C       a wider set of quadrature rules, and an appropriate method
 C       of selection]
-          IF (LPONEL) THEN
-          NQ=NQON
-          DO 600 IQ=1,NQ
-            AQ(IQ)=AQON(IQ)
-            WQ(IQ)=WQON(IQ)
-600       CONTINUE
-          ELSE 
-          NQ=NQOFF
-          DO 610 IQ=1,NQ
-            AQ(IQ)=AQOFF(IQ)
-            WQ(IQ)=WQOFF(IQ)
-610       CONTINUE
-          END IF
+            IF (LPONEL) THEN
+            NQ=NQON
+            DO 600 IQ=1,NQ
+              AQ(IQ)=AQON(IQ)
+              WQ(IQ)=WQON(IQ)
+600         CONTINUE
+            ELSE 
+            NQ=NQOFF
+            DO 610 IQ=1,NQ
+              AQ(IQ)=AQOFF(IQ)
+              WQ(IQ)=WQOFF(IQ)
+610         CONTINUE
+            END IF
 
-C     All operators are required
-          LLK=.TRUE.
-          LMK=.TRUE.
-          LMKT=.TRUE.
-          LNK=.TRUE.
+C     Only Lk and Mk operators are required. Set LLK, LMK true, 
+C      LMKT,LNK false. 
+            LLK=.TRUE.
+            LMK=.TRUE.
+            LMKT=.FALSE.
+            LNK=.FALSE.
 
 C     Call H2LC.
-          CALL H2LC(CK,P,VECP,QA,QB,LPONEL,
-     *     MAXNQ,NQ,AQ,WQ,
-     *     LVAL,EK,EGEOM,EQRULE,LFAIL1,
-     *     LLK,LMK,LMKT,LNK,DISLK,DISMK,DISMKT,DISNK)
+            CALL H2LC(CK,P,VECP,QA,QB,LPONEL,
+     *       MAXNQ,NQ,AQ,WQ,
+     *       LVAL,EK,EGEOM,EQRULE,LFAIL1,
+     *       LLK,LMK,LMKT,LNK,DISLK,DISMK,DISMKT,DISNK)
 
-          WKSPC1(ISE,JSE)=DISLK+MU*DISMKT
-          WKSPC2(ISE,JSE)=DISMK+MU*DISNK
+            WKSPC1(IKPT,ISE,JSE)=DISLK
+            WKSPC2(IKPT,ISE,JSE)=DISMK
          
 C    Close loop(JSE) 
-520     CONTINUE
+520       CONTINUE
 
-        WKSPC1(ISE,ISE)=WKSPC1(ISE,ISE)-MU/TWO
-        WKSPC2(ISE,ISE)=WKSPC2(ISE,ISE)+HALF
-        IF (LSOL) WKSPC6(ISE)=SFFPHI(ISE)+MU*SFFVEL(ISE)
-            
+          WKSPC2(IKPT,ISE,ISE)=WKSPC2(IKPT,ISE,ISE)+0.5D0
+          
 C   Close loop(ISE) 
-510   CONTINUE
+510     CONTINUE
 
-      IF (LSOL) THEN
-        CALL CGLS(MAXNSE,NSE,WKSPC2,WKSPC1,WKSPC6,SALPHA,SBETA,SF,
-     *   SPHI,SVEL,LFAIL,WKSPC5,WKSPC7)
-      END IF  
+500   CONTINUE
+
+      DO 750 JSE=1,NSE
+        IF (ABS(SALPHA(JSE)).GT.ABS(SBETA(JSE))) THEN
+          WKSPC7(JSE)=.TRUE.
+        ELSE
+          WKSPC7(JSE)=.FALSE.
+        END IF
+750   CONTINUE
+
+      DO 700 IKPT=1,NK
+        DO 710 ISE=1,NSE
+          DO 720 JSE=1,NSE
+            IF (WKSPC7(JSE)) THEN
+              CONST=SBETA(JSE)/SALPHA(JSE)
+              WKSPC3(IKPT,ISE,JSE)=
+     *         -CONST*WKSPC2(IKPT,ISE,JSE)-WKSPC1(IKPT,ISE,JSE)
+            ELSE
+              CONST=SALPHA(JSE)/SBETA(JSE)
+              WKSPC3(IKPT,ISE,JSE)=
+     *         WKSPC2(IKPT,ISE,JSE)+CONST*WKSPC1(IKPT,ISE,JSE)
+            END IF
+720       CONTINUE
+710     CONTINUE
+700   CONTINUE
+
+
+      CALL INTEIG(MAXNSE,NSE,MAXNK,NK,WKSPC5,WKSPC3,NEIG,EIGVAL,WKSPC6,
+     * WKSP00,WKSP01,WKSP02,WKSP03,WKSP04,WKSP05,WKSP06,WKSP07,
+     * WKSP08,WKSP09,WKSP10,WKSP11,WKSP12)
+
+
+      DO 810 IEIG=1,NEIG
+
+C Set k to the eigenfrequency
+        CK=CMPLX(DBLE(EIGVAL(IEIG)),ZERO)
+
+        DO 820 ISE=1,NSE
+          IF (WKSPC7(ISE)) THEN
+            SVEL(IEIG,ISE)=WKSPC6(IEIG,ISE)
+            SPHI(IEIG,ISE)=-SBETA(ISE)*SVEL(IEIG,ISE)/SALPHA(ISE)
+          ELSE
+            SPHI(IEIG,ISE)=WKSPC6(IEIG,ISE)
+            SVEL(IEIG,ISE)=-SALPHA(ISE)*SPHI(IEIG,ISE)/SBETA(ISE)
+          END IF
+820     CONTINUE
+
+
 
 C  SOLUTION IN THE DOMAIN
 
 C   Compute sound pressures at the selected interior points.
 C    Loop through the the points in the interior region
-      DO 800 IPI=1,NPI
-C    Set P
-        P(1)=PINT(IPI,1)
-        P(2)=PINT(IPI,2)
+        DO 800 IIP=1,NPI
+C   Set P
+          P(1)=PINT(IIP,1)
+          P(2)=PINT(IIP,2)
 C    Set VECP, this is arbitrary as the velocity/intensity at P
 C     is not sought.
-        VECP(1)=ONE
-        VECP(2)=ZERO
+          VECP(1)=ONE
+          VECP(2)=ZERO
 
 C    Initialise SUMPHI to zero
-        SUMPHI=PFFPHI(IPI)
+          SUMPHI=CZERO
 
 C    Loop(ISE) through the elements
-        DO 850 JSE=1,NSE
+          DO 900 JSE=1,NSE
 C     Compute the discrete Lk and Mk integral operators. 
             
 C     Set QA and QB, the coordinates of the edges of the JSEth element
-          QA(1)=VERTEX(SELV(JSE,1),1)
-          QA(2)=VERTEX(SELV(JSE,1),2)
-          QB(1)=VERTEX(SELV(JSE,2),1)
-          QB(2)=VERTEX(SELV(JSE,2),2)
+            QA(1)=VERTEX(SELV(JSE,1),1)
+            QA(2)=VERTEX(SELV(JSE,1),2)
+            QB(1)=VERTEX(SELV(JSE,2),1)
+            QB(2)=VERTEX(SELV(JSE,2),2)
 
 C     All the points do not lie on the boundary hence LPONEL=.FALSE.
-          LPONEL=.FALSE.              
+            LPONEL=.FALSE.              
 
 C     Only Lk, Mk operators are required. Set LLK,LMK true, 
 C      LMKT,LNK false. 
-          LLK=.TRUE.
-          LMK=.TRUE.
-          LMKT=.FALSE.
-          LNK=.FALSE.
+            LLK=.TRUE.
+            LMK=.TRUE.
+            LMKT=.FALSE.
+            LNK=.FALSE.
                 
+C     Select quadrature rule for H2LC
+            NQ=NQOFF
+            DO 910 IQ=1,NQ
+              AQ(IQ)=AQOFF(IQ)
+              WQ(IQ)=WQOFF(IQ)
+910         CONTINUE
+
 C     Call H2LC.
-          CALL H2LC(CK,P,VECP,QA,QB,LPONEL,
-     *     MAXNQ,NQOFF,AQOFF,WQOFF,
-     *     LVAL,EK,EGEOM,EQRULE,LFAIL,
-     *     LLK,LMK,LMKT,LNK,DISLK,DISMK,DISMKT,DISNK)
+            CALL H2LC(CK,P,VECP,QA,QB,LPONEL,
+     *       MAXNQ,NQOFF,AQOFF,WQOFF,
+     *       LVAL,EK,EGEOM,EQRULE,LFAIL,
+     *       LLK,LMK,LMKT,LNK,DISLK,DISMK,DISMKT,DISNK)
 
-          IF (.NOT.LSOL) THEN
-            WKSPC3(IPI,JSE)=DISLK
-            WKSPC4(IPI,JSE)=DISMK
-          END IF
+C      Accumulate phi 
+            SUMPHI=SUMPHI+DISLK*SVEL(IEIG,JSE)-DISMK*SPHI(IEIG,JSE)
 
-C     Accumulate phi 
-          IF (LSOL) SUMPHI=SUMPHI+DISLK*SVEL(JSE)-DISMK*SPHI(JSE)
+C      Close loop (ISE) through the elements
+900       CONTINUE
 
-C      Close loop (JSE) through the elements
-850     CONTINUE
+          PIPHI(IEIG,IIP)=SUMPHI
 
-        PIPHI(IPI)=SUMPHI
+C     Close loop(IIP) through the interior points
+800     CONTINUE
 
-C     Close loop(IPI) through the interior points
-800   CONTINUE
+
+C   Close loop(IEIG) through the eigenfrequencies
+810   CONTINUE
 
       END
 
 
 C ----------------------------------------------------------------------
 
-C Subordinate routines for AIBEM2
+C Subordinate routines for AMBEM2
 C ==============================
 
 C ----------------------------------------------------------------------
@@ -953,5 +1080,5 @@ C  Subroutine for returning the natural logarithm.
        FNLOG=LOG(X)
        END
 
-C---------------------------------------------------------------------
-      
+C ----------------------------------------------------------------------
+
