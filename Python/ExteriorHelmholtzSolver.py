@@ -3,12 +3,12 @@ from BoundaryData import *
 from AcousticProperties import *
 import numpy as np
     
-class InteriorHelmholtzSolver(object):
+class ExteriorHelmholtzSolver(object):
     
     def __init__(self, aVertex = None, aElement = None, c = 344.0, density = 1.205):
-        assert not (aVertex is None), "Cannot construct InteriorHelmholtzProblem2D without valid vertex array."
+        assert not (aVertex is None), "Cannot construct ExteriorHelmholtzProblem2D without valid vertex array."
         self.aVertex = aVertex
-        assert not (aElement is None), "Cannot construct InteriorHelmholtzProblem2D without valid element array."
+        assert not (aElement is None), "Cannot construct ExteriorHelmholtzProblem2D without valid element array."
         self.aElement = aElement
         self.c       = c
         self.density = density
@@ -21,7 +21,7 @@ class InteriorHelmholtzSolver(object):
                                        self.aVertex[self.aElement[:, 1]] +\
                                        self.aVertex[self.aElement[:, 2]])
     def __repr__(self):
-        result = "InteriorHelmholtzSolover("
+        result = "ExteriorHelmholtzSolover("
         result += "aVertex = " + repr(self.aVertex) + ", "
         result += "aElement = " + repr(self.aElement) + ", "
         result += "c = " + repr(self.c) + ", "
@@ -78,7 +78,9 @@ class InteriorHelmholtzSolver(object):
         A, B = self.computeBoundaryMatrices(k, mu)
         c = np.empty(self.aElement.shape[0], dtype=complex)
         for i in range(self.aElement.shape[0]):
-            c[i] = boundaryIncidence.phi[i] + mu * boundaryIncidence.v[i]
+            # Note, the only difference between the interior solver and this
+            # one is the sign of the assignment below.
+            c[i] = -(boundaryIncidence.phi[i] + mu * boundaryIncidence.v[i])
 
         phi, v = self.SolveLinearEquation(B, A, c,
                                           boundaryCondition.alpha,

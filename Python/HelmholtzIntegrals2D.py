@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.linalg import norm
 from scipy.special import hankel1
+from Geometry import Normal2D
 
 def ComplexQuad(func, start, end):                                                 
     samples = np.array([[0.980144928249, 5.061426814519E-02],                           
