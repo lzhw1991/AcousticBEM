@@ -838,7 +838,7 @@ C     is not sought.
         VECP(2)=ZERO
 
 C    Initialise SUMPHI to zero
-        SUMPHI=PEPHI(IPE)
+        SUMPHI=PFFPHI(IPE)
 
 C    Loop(ISE) through the elements
         DO 850 JSE=1,NSE

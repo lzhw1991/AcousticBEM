@@ -602,8 +602,8 @@ C   :The rigid boundary implies the bondary condition v=0.
 
 C   The incident velocity potential is given by {\phi}_inc=i*h0(kr)/4
 C    where r is the distance from the point (0.5,0.25)
-      PX=0.05D0
-      PY=-0.05D0
+      PX= 0.5D0
+      PY= 0.25D0
 C   :Set K, the wavenumber
       K=TWO*PI*FRVAL(3)/CVAL(3)
       DO 260 ISP=1,NSP
@@ -666,7 +666,7 @@ C    and type of boundary condition
             SFFVEL(ISP)=SVELIN(ITEST,ISP)
 640       CONTINUE
           DO 650 IPE=1,NPE
-            PEPHI(IPE)=PPHIIN(ITEST,IPE)
+            PFFPHI(IPE)=PPHIIN(ITEST,IPE)
 650       CONTINUE
 
 C   Set the parameter
