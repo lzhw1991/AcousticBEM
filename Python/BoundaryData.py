@@ -40,3 +40,13 @@ class BoundarySolution(object):
                     i+1, self.aPhi[i].real, self.aPhi[i].imag, pressure.real, pressure.imag,                      \
                     self.aV[i].real, self.aV[i].imag, intensity)
         return res
+
+    def radiationRatio(self):
+        solver = self.parent
+        power = 0.0
+        bpower = 0.0
+        for i in range(self.aPhi.size):
+            pressure = soundPressure(self.k, self.aPhi[i], c=self.parent.c, density=self.parent.density)
+            power += AcousticIntensity(pressure, self.aV[i])
+            bpower += (self.parent.density * self.parent.c * np.abs(self.aV[i])**2)
+        return 2 * power / bpower

@@ -21,7 +21,7 @@ class ExteriorHelmholtzSolver(object):
                                        self.aVertex[self.aElement[:, 1]] +\
                                        self.aVertex[self.aElement[:, 2]])
     def __repr__(self):
-        result = "ExteriorHelmholtzSolover("
+        result = "ExteriorHelmholtzSolver("
         result += "aVertex = " + repr(self.aVertex) + ", "
         result += "aElement = " + repr(self.aElement) + ", "
         result += "c = " + repr(self.c) + ", "
