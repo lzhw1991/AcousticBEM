@@ -30,10 +30,10 @@ class ExteriorHelmholtzSolver3D(ExteriorHelmholtzSolver):
                 qb = self.aVertex[self.aElement[j, 1]]
                 qc = self.aVertex[self.aElement[j, 2]]
 
-                elementL  = ComputeL(k, center, qa, qb, qc, i==j)
-                elementM  = ComputeM(k, center, qa, qb, qc, i==j)
-                elementMt = ComputeMt(k, center, centerNormal, qa, qb, qc, i==j)
-                elementN  = ComputeN(k, center, centerNormal, qa, qb, qc, i==j)
+                elementL  = ComputeL(k, self.aCenters[i], qa, qb, qc, i==j)
+                elementM  = ComputeM(k, self.aCenters[i], qa, qb, qc, i==j)
+                elementMt = ComputeMt(k, self.aCenters[i], centerNormal, qa, qb, qc, i==j)
+                elementN  = ComputeN(k, self.aCenters[i], centerNormal, qa, qb, qc, i==j)
 
                 A[i, j] = elementL + mu * elementMt
                 B[i, j] = elementM + mu * elementN
@@ -70,7 +70,7 @@ class ExteriorHelmholtzSolver3D(ExteriorHelmholtzSolver):
                 # solver is that the signs in the assignment below trade places.
                 # TODO: Investigate if it's possible to reduce redundant code in these
                 # two solvers.
-                sum -= elementL * solution.aV[j] + elementM * solution.aPhi[j]
+                sum -= elementL * solution.aV[j] - elementM * solution.aPhi[j]
             aResult[i] = sum
         return aResult
 

@@ -68,7 +68,7 @@ class ExteriorHelmholtzSolverRAD(ExteriorHelmholtzSolver):
                 # solver is that the signs in the assignment below trade places.
                 # TODO: Investigate if it's possible to reduce redundant code in these
                 # two solvers.
-                sum -= elementL * solution.aV[j] + elementM * solution.aPhi[j]
+                sum -= elementL * solution.aV[j] - elementM * solution.aPhi[j]
             aResult[i] = sum
         return aResult
 

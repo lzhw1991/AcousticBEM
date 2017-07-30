@@ -442,7 +442,7 @@ C Check that EGEOM is not too large
 
       IF (LVALID) THEN
 C Check that the vertices are distinct with respect to EGEOM
-        LERROR=.FALSE.
+        LWARN=.FALSE.
         DO 130 IV=1,NV-1
           PA(1)=VERTEX(IV,1)
           PA(2)=VERTEX(IV,2)
