@@ -1,4 +1,4 @@
-from InteriorHelmholtzSolver import *
+from HelmholtzSolver import *
 
 bOptimized = False
 if bOptimized:
@@ -10,12 +10,15 @@ from Geometry import *
 from AcousticProperties import *
 import numpy as np
 
-class InteriorHelmholtzSolver2D(InteriorHelmholtzSolver):
 
+class HelmholtzSolver2D(HelmholtzSolver):
     def __init__(self, *args, **kwargs):
-        super(InteriorHelmholtzSolver2D, self).__init__(*args, **kwargs)
+        super(HelmholtzSolver2D, self).__init__(*args, **kwargs)
+        self.aCenters = 0.5 * (self.aVertex[self.aElement[:, 0]] + self.aVertex[self.aElement[:, 1]])
+        # lenght of the boundary elements (for the 3d shapes this is replaced by aArea
+        self.aLength = np.linalg.norm(self.aVertex[self.aElement[:, 0]] - self.aVertex[self.aElement[:, 1]])
 
-    def computeBoundaryMatrices(self, k, mu):
+    def computeBoundaryMatrices(self, k, mu, orientation):
         A = np.empty((self.aElement.shape[0], self.aElement.shape[0]), dtype=complex)
         B = np.empty(A.shape, dtype=complex)
 
@@ -37,28 +40,51 @@ class InteriorHelmholtzSolver2D(InteriorHelmholtzSolver):
                 A[i, j] = elementL + mu * elementMt
                 B[i, j] = elementM + mu * elementN
 
-            A[i,i] -= 0.5 * mu
-            B[i,i] += 0.5
-
+            if orientation == 'interior':
+                # interior variant, signs are reversed for exterior
+                A[i,i] -= 0.5 * mu
+                B[i,i] += 0.5
+            elif orientation == 'exterior':
+                A[i,i] += 0.5 * mu
+                B[i,i] -= 0.5
+            else:
+                assert False, 'Invalid orientation: {}'.format(orientation)
+                
         return A, B
+
+    def computeBoundaryMatricesInterior(self, k, mu):
+        return self.computeBoundaryMatrices(k, mu, 'interior')
     
-    def solveInterior(self, solution, aIncidentInteriorPhi, aInteriorPoints):
-        assert aIncidentInteriorPhi.shape == aInteriorPoints.shape[:-1], \
-            "Incident phi vector and interior points vector must match"
+    def computeBoundaryMatricesExterior(self, k, mu):
+        return self.computeBoundaryMatrices(k, mu, 'exterior')
 
-        aResult = np.empty(aInteriorPoints.shape[0], dtype=complex)
+    
+    def solveSamples(self, solution, aIncidentPhi, aSamples, orientation):
+        assert aIncidentPhi.shape == aSamples.shape[:-1], \
+            "Incident phi vector and sample points vector must match"
 
-        for i in range(aIncidentInteriorPhi.size):
-            p  = aInteriorPoints[i]
-            sum = aIncidentInteriorPhi[i]
+        aResult = np.empty(aSamples.shape[0], dtype=complex)
+
+        for i in range(aIncidentPhi.size):
+            p  = aSamples[i]
+            sum = aIncidentPhi[i]
             for j in range(solution.aPhi.size):
                 qa = self.aVertex[self.aElement[j, 0]]
                 qb = self.aVertex[self.aElement[j, 1]]
 
                 elementL  = ComputeL(solution.k, p, qa, qb, False)
                 elementM  = ComputeM(solution.k, p, qa, qb, False)
-
-                sum += elementL * solution.aV[j] - elementM * solution.aPhi[j]
+                if orientation == 'interior':
+                    sum += elementL * solution.aV[j] - elementM * solution.aPhi[j]
+                elif orientation == 'exterior':
+                    sum -= elementL * solution.aV[j] - elementM * solution.aPhi[j]
+                else:
+                    assert False, 'Invalid orientation: {}'.format(orientation)
             aResult[i] = sum
         return aResult
 
+    def solveInterior(self, solution, aIncidentInteriorPhi, aInteriorPoints):
+        return self.solveSamples(solution, aIncidentInteriorPhi, aInteriorPoints, 'interior')
+    
+    def solveExterior(self, solution, aIncidentExteriorPhi, aExteriorPoints):
+        return self.solveSamples(solution, aIncidentExteriorPhi, aExteriorPoints, 'exterior')
