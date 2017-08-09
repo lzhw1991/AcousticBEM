@@ -1,5 +1,5 @@
-from InteriorHelmholtzSolverRAD import *
 from NativeInterface import *
+import numpy as np
 
 def ComputeL(k, p, qa, qb, pOnElement):
     result = Complex()
