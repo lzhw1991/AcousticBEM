@@ -17,7 +17,7 @@
 # ---------------------------------------------------------------------------
 from HelmholtzSolver import *
 
-bOptimized = False
+bOptimized = True
 if bOptimized:
     from HelmholtzIntegrals2D_C import *
 else:
