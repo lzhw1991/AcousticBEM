@@ -14,8 +14,7 @@ def readVertexArray(fileName):
     for l in file:
         strs = l.split()
         if (strs[0] != '#'):
-            assert nodeIndex ==  int(strs[0]), \
-                'nodeIndex ({}) doesn\'t match file ({})'.format(nodeIndex, int(strs[0]))
+            assert nodeIndex ==  int(strs[0]), "nodeIndex ({}) doesn\'t match file ({})".format(nodeIndex, int(strs[0]))
             for dim in range(nDimensions):
                 aVertices[nodeIndex-1, dim] = float(strs[1 + dim])
             for attr in range(nAttributes):
@@ -51,10 +50,10 @@ def writeSTL(fileName, aVertices, aTriangles, aBoundaryMarker = None, boundaryMa
     file = open(fileName + '.stl', 'w')
     file.write('solid ' + fileName + '\n')
     for i in range(aTriangles.shape[0]):
-        if aBoundaryMarker[i] == boundaryMarker:
-            p1 = aVertices[aTriangles[i][0], :]
-            p2 = aVertices[aTriangles[i][1], :]
-            p3 = aVertices[aTriangles[i][2], :]
+        if aBoundaryMarker is None or aBoundaryMarker[i] == boundaryMarker:
+            p1 = aVertices[aTriangles[i, 0], :]
+            p2 = aVertices[aTriangles[i, 1], :]
+            p3 = aVertices[aTriangles[i, 2], :]
             n = np.cross(p2 - p1, p3 - p1)
             n /= np.linalg.norm(n) # normalize
             file.write('facet normal ' + str(n[0]) + ' ' +  str(n[1]) + ' ' + str(n[2]) + '\n')
