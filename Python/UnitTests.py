@@ -1,3 +1,20 @@
+# ---------------------------------------------------------------------------
+# Copyright (C) 2017 Frank Jargstorff
+#
+# This file is part of the AcousticBEM library.
+# AcousticBEM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# AcousticBEM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with AcousticBEM.  If not, see <http://www.gnu.org/licenses/>.
+# ---------------------------------------------------------------------------
 import unittest
 import InteriorHelmholtzSolver2D as IH
 import InteriorHelmholtzSolver2D_C as IH
@@ -19,14 +36,14 @@ class TestComplexQuadGenerator(unittest.TestCase):
 
 class TestCircularIntegratorPI(unittest.TestCase):
 
-    def testCurcularIntegrator01(self):
+    def testCircularIntegrator01(self):
         circle = RAD.CircularIntegratorPi(1)
         def func(x):
             return 1.0
         result = circle.integrate(func)
         self.assertAlmostEqual(result, np.pi, msg = "{} != {}".format(result, np.pi))
 
-    def testCurcularIntegrator02(self):
+    def testCircularIntegrator02(self):
         circle = RAD.CircularIntegratorPi(2)
         def func(x):
             return 1.0
