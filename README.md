@@ -12,4 +12,8 @@ The `C` subdirectory contains C implementations of the discrete integral operato
 
 The `Jupyter` subdirectory contains a number of Jupyter notebooks that implement the example programs from the original Fortan library. The checked in versions contain results and can be opened directly from the Github web page.
 
+## Building
 
+For AcousticBEM the only code requiring compilation are the integration methods and the methods implementing the discrete integral operators (L, N, M, Mt in 2D, 3D, and RAD) variations. The Hankel functions used in this code are provided by the GNU Scientific Library (GSL). On an Ubuntu system this can be installed via apt-get and that's should be the only dependency requiring attention. 
+
+The original Fortran code also requires the GSL library, which has Fortran bindings called fgsl. The makefiles require the fgsl.mod and libfgsl.a files in a subdirectory under the 'Fortran' directory, called 'fgsl'.
