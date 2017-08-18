@@ -10,7 +10,7 @@ The `Python` subdirectory contains all the Python library code.
 
 The `C` subdirectory contains C implementations of the discrete integral operators. These methods are accessible via Python native method invocation. The Python files allow configuring using these optimized versions over the Python implementation and optimized is the default setting of the code as it is checked in.
 
-The `Jupyter` subdirectory contains a number of Jupyter notebooks that implement the example programs from the original Fortan library. The checked in versions contain results and can be opened directly from the Github web page.
+The `Jupyter` subdirectory contains a number of Jupyter notebooks that implement the example programs from the original Fortan library. The checked in versions contain results and can be view in Github.
 
 ## Building
 
