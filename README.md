@@ -16,4 +16,4 @@ The `Jupyter` subdirectory contains a number of Jupyter notebooks that implement
 
 For AcousticBEM the only code requiring compilation are the integration methods and the methods implementing the discrete integral operators (L, N, M, Mt in 2D, 3D, and RAD variations). The Hankel functions used in this code are provided by the GNU Scientific Library (GSL). On an Ubuntu system this can be installed via apt-get and that is the only dependency requiring attention. 
 
-The original Fortran code also requires the GSL library, which has Fortran bindings called fgsl. The makefiles require the fgsl.mod and libfgsl.a files in a subdirectory under the 'Fortran' directory, called 'fgsl'.
+The original Fortran code also requires the GSL library, which has Fortran bindings called fgsl. The makefiles require the `fgsl.mod` and `libfgsl.a` files in a subdirectory under the `Fortran` directory, called `fgsl`.
