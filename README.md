@@ -1,5 +1,5 @@
 # AcousticBEM
-AcousticBEM is a small library and example programs for solving the acoustic Helmholtz equation using the Boundary Element Method. The library is a re-implementation of a large part of the functionality of Stephen Kirkup's ABEM Fortran library. The original Fortran code and his book "The Boundary Element Method in Acoustics" are available on his website: <http://www.boundary-element-method.com/>.
+AcousticBEM is a small library and example programs for solving the acoustic Helmholtz equation using the Boundary Element Method. The library is a re-implementation of the core components of Stephen Kirkup's ABEM Fortran library and its example programs. The original Fortran code and the book "The Boundary Element Method in Acoustics" are available on his website: <http://www.boundary-element-method.com/>.
 
 ## Directory Structure
 All the project's code is in subdirectories of the repository. The `papers` directory contains PDF files of the aforementioned book by S. Kirkup as well as two later papers relating to BEM in Acoustics.
